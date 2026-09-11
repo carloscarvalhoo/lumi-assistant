@@ -21,9 +21,11 @@ export function useKnowledgeFiles() {
   const [loadingFiles, setLoadingFiles] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [reindexing, setReindexing] = useState(false);
+  const [reindexingLabel, setReindexingLabel] = useState("");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [refreshResult, setRefreshResult] = useState(null);
 
   async function loadFiles() {
     try {
@@ -144,6 +146,7 @@ export function useKnowledgeFiles() {
     if (!ok) return false;
 
     setReindexing(true);
+    setReindexingLabel("Reprocessando documento");
     setError("");
     setSuccessMessage("");
     try {
@@ -156,26 +159,38 @@ export function useKnowledgeFiles() {
       return false;
     } finally {
       setReindexing(false);
+      setReindexingLabel("");
     }
   }
 
-  async function reindexAll() {
+  /** As duas ações abaixo exigem uma seleção explícita — evita disparar sem
+   * querer uma operação cara (minutos + cota de embedding) na base inteira. */
+  async function reindexAll(selectedFiles) {
+    const fileIds = (selectedFiles || []).map((f) => f.id).filter(Boolean);
+    if (!fileIds.length) return "needs-selection";
+
     const ok = await confirm({
-      title: "Reindexar tudo",
-      message:
-        "Refaz o processamento de toda a base. Pode levar alguns minutos e consome cota de embeddings.",
+      title: "Reindexar selecionadas",
+      message: `${fileIds.length} fonte(s) serão re-fragmentadas e re-embedadas. Pode levar alguns minutos e consome cota de embeddings.`,
       confirmLabel: "Reindexar",
     });
     if (!ok) return false;
 
     setReindexing(true);
+    setReindexingLabel("Reindexando fontes selecionadas");
     setError("");
     setSuccessMessage("");
     try {
-      const r = await reindexAllFiles();
-      setSuccessMessage(
-        `Reindexação: ${r.ok}/${r.total} documentos${r.failed?.length ? `, ${r.failed.length} com erro` : ""}.`,
-      );
+      const r = await reindexAllFiles(fileIds);
+      setRefreshResult({
+        title: "Reindexação concluída",
+        stats: [
+          { label: "processadas", value: r.ok ?? 0 },
+          { label: "total", value: r.total ?? fileIds.length },
+          ...(r.failed?.length ? [{ label: "com erro", value: r.failed.length }] : []),
+        ],
+        failed: (r.failed || []).map((f) => ({ url: f.url || f.fileId, error: f.error })),
+      });
       await loadFiles();
       return true;
     } catch (err) {
@@ -183,30 +198,36 @@ export function useKnowledgeFiles() {
       return false;
     } finally {
       setReindexing(false);
+      setReindexingLabel("");
     }
   }
 
-  async function checkUrlUpdates() {
+  async function checkUrlUpdates(selectedFiles) {
+    const fileIds = (selectedFiles || []).map((f) => f.id).filter(Boolean);
+    if (!fileIds.length) return "needs-selection";
+
     const ok = await confirm({
       title: "Verificar atualizações",
-      message: "Compara cada página do site com o que está na base e re-processa só o que mudou.",
+      message: `Compara ${fileIds.length} fonte(s) selecionada(s) com o site e re-processa só o que mudou.`,
       confirmLabel: "Verificar",
     });
     if (!ok) return false;
 
     setReindexing(true);
+    setReindexingLabel("Verificando fontes selecionadas");
     setError("");
     setSuccessMessage("");
     try {
-      const r = await refreshUrls();
-      const sampleReason = r.failed?.[0]?.error;
-      setSuccessMessage(
-        `Verificação: ${r.unchanged} iguais, ${r.updated} atualizada(s)${
-          r.failed?.length
-            ? `, ${r.failed.length} inacessível(is)${sampleReason ? ` (ex: ${sampleReason})` : ""}`
-            : ""
-        }.`,
-      );
+      const r = await refreshUrls(fileIds);
+      setRefreshResult({
+        title: "Verificação concluída",
+        stats: [
+          { label: "iguais", value: r.unchanged ?? 0 },
+          { label: "atualizada(s)", value: r.updated ?? 0 },
+          ...(r.failed?.length ? [{ label: "inacessível(is)", value: r.failed.length }] : []),
+        ],
+        failed: (r.failed || []).map((f) => ({ url: f.url, error: f.error })),
+      });
       await loadFiles();
       return true;
     } catch (err) {
@@ -214,6 +235,7 @@ export function useKnowledgeFiles() {
       return false;
     } finally {
       setReindexing(false);
+      setReindexingLabel("");
     }
   }
 
@@ -227,9 +249,12 @@ export function useKnowledgeFiles() {
     loadingFiles,
     uploading,
     reindexing,
+    reindexingLabel,
     progress,
     error,
     successMessage,
+    refreshResult,
+    clearRefreshResult: () => setRefreshResult(null),
     uploadFile,
     uploadUrl,
     removeFile,

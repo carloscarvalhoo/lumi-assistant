@@ -75,10 +75,21 @@ export async function reprocessKnowledgeFile(fileId) {
   return { fileId, chunksCount: result.chunksCount, changed: true };
 }
 
-/** Reprocessa todos os documentos, um a um (para migração/reindex). */
-export async function reprocessAllKnowledgeFiles({ onProgress } = {}) {
-  const snapshot = await adminDb.collection("knowledgeFiles").get();
-  const ids = snapshot.docs.map((doc) => doc.id);
+/**
+ * Reprocessa vários documentos, um a um.
+ * @param {{ onProgress?: (done: number, total: number) => void, fileIds?: string[] }} [options]
+ *   `fileIds` restringe a operação a esses documentos; sem isso, processa a
+ *   base inteira (usado pelo cron/migração — nunca pelo clique manual no
+ *   painel, que sempre exige uma seleção explícita).
+ */
+export async function reprocessAllKnowledgeFiles({ onProgress, fileIds } = {}) {
+  let ids;
+  if (Array.isArray(fileIds) && fileIds.length) {
+    ids = fileIds;
+  } else {
+    const snapshot = await adminDb.collection("knowledgeFiles").get();
+    ids = snapshot.docs.map((doc) => doc.id);
+  }
 
   const results = [];
   for (let i = 0; i < ids.length; i++) {

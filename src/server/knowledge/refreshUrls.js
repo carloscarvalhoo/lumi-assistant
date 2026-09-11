@@ -35,11 +35,17 @@ function originOf(url) {
  *  2. Requisição condicional (If-None-Match / If-Modified-Since) — 304 = igual.
  *  3. Hash do conteúdo — comparação final.
  *
- * @param {{ onProgress?: (done: number, total: number) => void }} [options]
+ * @param {{ onProgress?: (done: number, total: number) => void, fileIds?: string[] }} [options]
+ *   `fileIds` restringe a verificação a esses documentos; sem isso, verifica
+ *   a base inteira (usado pelo cron — o clique manual no painel sempre exige
+ *   uma seleção explícita).
  */
-export async function refreshAllUrls({ onProgress } = {}) {
+export async function refreshAllUrls({ onProgress, fileIds } = {}) {
   const snapshot = await adminDb.collection("knowledgeFiles").get();
-  const urlDocs = snapshot.docs.filter((doc) => doc.data().sourceUrl);
+  const idFilter = Array.isArray(fileIds) && fileIds.length ? new Set(fileIds) : null;
+  const urlDocs = snapshot.docs.filter(
+    (doc) => doc.data().sourceUrl && (!idFilter || idFilter.has(doc.id)),
+  );
 
   const summary = {
     total: urlDocs.length,
@@ -151,6 +157,17 @@ export async function refreshAllUrls({ onProgress } = {}) {
     } catch (error) {
       summary.failed.push({ fileId: doc.id, url, error: error?.message });
       logger.warn(`⚠️ refresh falhou em ${url}: ${error?.message}`);
+      // Sem isso o documento fica com o estado antigo (ou "em dia" indevido)
+      // quando a página foi baixada com sucesso mas o passo seguinte (embedding,
+      // por exemplo) falhou — como quando a cota/cooldown de embedding estoura.
+      try {
+        await doc.ref.set(
+          { lastCheckedAt: now, lastCheckFailed: true, lastCheckError: error?.message || null },
+          { merge: true },
+        );
+      } catch {
+        // Se nem isso funcionar (Firestore fora do ar), segue sem travar o resto do loop.
+      }
     }
 
     onProgress?.(i + 1, urlDocs.length);

@@ -190,7 +190,16 @@ export default function KnowledgeFileList({
   }
 
   function getIndexedDate(file) {
-    return file?.createdAt || file?.indexedAt || file?.uploadedAt || file?.updatedAt;
+    // updatedAt/lastCheckedAt refletem o processamento mais recente (reindex,
+    // verificação de atualização); uploadedAt fica congelado na data original
+    // de quando o documento foi adicionado pela primeira vez.
+    return (
+      file?.updatedAt ||
+      file?.lastCheckedAt ||
+      file?.createdAt ||
+      file?.indexedAt ||
+      file?.uploadedAt
+    );
   }
 
   function getPageCount(file) {

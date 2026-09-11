@@ -106,8 +106,12 @@ export async function patchKnowledgeFile(id, payload) {
   return data;
 }
 
-export async function reindexAllFiles() {
-  const response = await fetch("/api/admin/reindex", { method: "POST" });
+export async function reindexAllFiles(fileIds) {
+  const response = await fetch("/api/admin/reindex", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileIds }),
+  });
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
@@ -117,8 +121,12 @@ export async function reindexAllFiles() {
   return data;
 }
 
-export async function refreshUrls() {
-  const response = await fetch("/api/admin/refresh-urls", { method: "POST" });
+export async function refreshUrls(fileIds) {
+  const response = await fetch("/api/admin/refresh-urls", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileIds }),
+  });
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {

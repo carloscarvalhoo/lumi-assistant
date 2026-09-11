@@ -8,8 +8,25 @@ import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import LanguageIcon from "@mui/icons-material/Language";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
 
-export default function UrlUploadCard({ uploading, error, successMessage, onUploadUrl }) {
+function hostnameOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+export default function UrlUploadCard({
+  uploading,
+  error,
+  successMessage,
+  onUploadUrl,
+  files = [],
+}) {
+  const confirm = useConfirm();
   const [url, setUrl] = useState("");
   const [urlsMapeadas, setUrlsMapeadas] = useState([]);
   const [urlsSelecionadas, setUrlsSelecionadas] = useState([]);
@@ -20,6 +37,20 @@ export default function UrlUploadCard({ uploading, error, successMessage, onUplo
   async function handleMapUrls(e) {
     e.preventDefault();
     if (!url.trim()) return;
+
+    const host = hostnameOf(url.trim());
+    const matches = host
+      ? files.filter((f) => f.sourceUrl && hostnameOf(f.sourceUrl) === host)
+      : [];
+
+    if (matches.length > 0) {
+      const ok = await confirm({
+        title: "Site já indexado",
+        message: `"${host}" já tem ${matches.length} página(s) na base. Mapear de novo não duplica — as páginas iguais são atualizadas no lugar. Quer mapear mesmo assim?`,
+        confirmLabel: "Mapear mesmo assim",
+      });
+      if (!ok) return;
+    }
 
     setLoadingMap(true);
     setMapMessage("");
@@ -61,6 +92,12 @@ export default function UrlUploadCard({ uploading, error, successMessage, onUplo
 
   return (
     <section className="mb-8 rounded-[28px] border border-white/10 bg-[#111116]/90 p-6 shadow-2xl shadow-black/30">
+      <LoadingOverlay
+        active={loadingMap}
+        title="Mapeando o site…"
+        subtitle="Descobrindo as páginas do domínio. Pode levar alguns segundos."
+      />
+
       <div className="mb-5">
         <h2 className="text-lg font-semibold text-zinc-100">Indexar páginas da web</h2>
         <p className="mt-1 text-sm text-zinc-500">

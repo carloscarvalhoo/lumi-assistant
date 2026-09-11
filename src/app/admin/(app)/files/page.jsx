@@ -5,6 +5,9 @@ import FileUploadCard from "@/components/admin/FileUploadCard";
 import UrlUploadCard from "@/components/admin/UrlUploadCard";
 import KnowledgeFileList from "@/components/admin/KnowledgeFileList";
 import EmbeddingLoader from "@/components/ui/EmbeddingLoader";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
+import Modal from "@/components/ui/Modal";
+import RefreshResultModal from "@/components/admin/RefreshResultModal";
 import PageTitle from "@/components/admin/ui/PageTitle";
 import Button from "@/components/admin/ui/Button";
 import { useKnowledgeFiles } from "@/features/admin/knowledge-files/hooks/useKnowledgeFiles";
@@ -15,9 +18,12 @@ export default function AdminFilesPage() {
     loadingFiles,
     uploading,
     reindexing,
+    reindexingLabel,
     progress,
     error,
     successMessage,
+    refreshResult,
+    clearRefreshResult,
     uploadFile,
     uploadUrl,
     removeFile,
@@ -33,6 +39,7 @@ export default function AdminFilesPage() {
   const [deletingSelected, setDeletingSelected] = useState(false);
   const [uploadingCount, setUploadingCount] = useState(0);
   const [uploadingType, setUploadingType] = useState("url");
+  const [showSelectWarning, setShowSelectWarning] = useState(false);
 
   const getFileKey = (file) => file?.id || file?.sourceUrl || file?.url || file?.originalName;
 
@@ -77,6 +84,16 @@ export default function AdminFilesPage() {
     setUploadingCount(0);
   }
 
+  async function handleCheckUpdates() {
+    const result = await checkUrlUpdates(selectedFiles);
+    if (result === "needs-selection") setShowSelectWarning(true);
+  }
+
+  async function handleReindexAll() {
+    const result = await reindexAll(selectedFiles);
+    if (result === "needs-selection") setShowSelectWarning(true);
+  }
+
   const tabs = [
     { id: "link", label: "Links e sites" },
     { id: "file", label: "Upload de arquivos" },
@@ -85,6 +102,27 @@ export default function AdminFilesPage() {
   return (
     <div className="space-y-10">
       <EmbeddingLoader active={uploading} count={uploadingCount} type={uploadingType} />
+      <LoadingOverlay
+        active={reindexing}
+        title={reindexingLabel || "Processando…"}
+        subtitle="Isso pode levar alguns minutos. Não feche esta janela."
+      />
+      <RefreshResultModal result={refreshResult} onClose={clearRefreshResult} />
+
+      <Modal
+        open={showSelectWarning}
+        onClose={() => setShowSelectWarning(false)}
+        title="Selecione ao menos uma fonte"
+        footer={
+          <Button size="sm" onClick={() => setShowSelectWarning(false)}>
+            Entendi
+          </Button>
+        }
+      >
+        Marque a caixinha de uma ou mais fontes na lista abaixo (ou use &quot;Selecionar
+        todos&quot;) antes de verificar atualizações ou reindexar — assim a ação roda só no que você
+        escolheu, em vez de processar as 138 fontes sem querer.
+      </Modal>
 
       <div>
         <PageTitle
@@ -116,6 +154,7 @@ export default function AdminFilesPage() {
               error={error}
               successMessage={successMessage}
               onUploadUrl={handleUploadUrl}
+              files={files}
             />
           ) : (
             <FileUploadCard
@@ -133,11 +172,11 @@ export default function AdminFilesPage() {
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <h2 className="text-sm font-semibold text-zinc-200">Fontes ativas</h2>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={checkUrlUpdates} disabled={reindexing}>
-              {reindexing ? "Verificando…" : "Verificar atualizações"}
+            <Button size="sm" onClick={handleCheckUpdates} disabled={reindexing}>
+              Verificar atualizações{selectedFiles.length > 0 ? ` (${selectedFiles.length})` : ""}
             </Button>
-            <Button size="sm" onClick={reindexAll} disabled={reindexing}>
-              {reindexing ? "Reindexando…" : "Reindexar tudo"}
+            <Button size="sm" onClick={handleReindexAll} disabled={reindexing}>
+              Reindexar{selectedFiles.length > 0 ? ` (${selectedFiles.length})` : " selecionadas"}
             </Button>
             {selectedFiles.length > 0 && (
               <Button
