@@ -14,6 +14,7 @@ export default function ChatWidget({ settings = {} }) {
     useChat();
 
   const messagesEndRef = useRef(null);
+  const prevMessageCountRef = useRef(0);
   const [toast, setToast] = useState("");
 
   const hasMessages = messages.length > 0;
@@ -26,7 +27,15 @@ export default function ChatWidget({ settings = {} }) {
     `O ${botName} pode cometer erros. Consulte o setor responsável quando necessário.`;
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Rolagem suave só quando uma mensagem NOVA aparece. Durante o streaming
+    // a mesma mensagem cresce token a token (o array muda de referência a
+    // cada pedaço, mas o tamanho não), então rolar suave a cada pedaço fica
+    // "correndo atrás" de um alvo que não para de se mover — nesse intervalo
+    // o texto ainda aparecia sobreposto ao input fixo. Rolagem instantânea
+    // durante o crescimento mantém sempre grudado no fundo, sem essa folga.
+    const isNewMessage = messages.length !== prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+    messagesEndRef.current?.scrollIntoView({ behavior: isNewMessage ? "smooth" : "auto" });
   }, [messages, loading]);
 
   useEffect(() => {
