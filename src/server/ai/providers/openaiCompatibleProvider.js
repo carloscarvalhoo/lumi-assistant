@@ -1,5 +1,5 @@
 /**
- * @file Provedor genérico para APIs no formato OpenAI /chat/completions (Groq, OpenRouter, Mistral, Cerebras). Presets por provedor; chave sempre do ambiente.
+ * @file Provedor genérico para APIs no formato OpenAI /chat/completions (Groq, Mistral, Cerebras). Presets por provedor; chave sempre do ambiente.
  * @module server/ai/providers/openaiCompatibleProvider
  */
 
@@ -15,14 +15,6 @@ const PRESETS = {
   mistral: {
     baseUrl: "https://api.mistral.ai/v1",
     apiKeyEnv: "MISTRAL_API_KEY",
-  },
-  openrouter: {
-    baseUrl: "https://openrouter.ai/api/v1",
-    apiKeyEnv: "OPENROUTER_API_KEY",
-    extraHeaders: {
-      "HTTP-Referer": process.env.PUBLIC_APP_URL || "http://localhost:3000",
-      "X-Title": "Chatbot IFPR",
-    },
   },
   cerebras: {
     baseUrl: "https://api.cerebras.ai/v1",

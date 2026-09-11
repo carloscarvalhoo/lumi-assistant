@@ -4,6 +4,7 @@ import Link from "next/link";
 
 export default function LandingPage({ settings = {} }) {
   const name = settings.botName || "ELO";
+  const institution = settings.institutionName || "Instituição";
 
   return (
     <main className="relative min-h-screen overflow-hidden text-white">
@@ -43,8 +44,8 @@ export default function LandingPage({ settings = {} }) {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-sm leading-7 text-zinc-400 sm:mt-8 sm:text-base md:text-lg">
-            Um assistente virtual inteligente que responde perguntas institucionais de forma clara,
-            rápida e confiável, direto da base de conhecimento oficial.
+            O assistente virtual da {institution}. Pergunte sobre editais, cursos, prazos e serviços
+            e receba a resposta na hora, em uma conversa.
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row sm:gap-4">
@@ -77,17 +78,16 @@ export default function LandingPage({ settings = {} }) {
           </div>
           <div>
             <h2 className="text-2xl font-medium leading-tight text-zinc-100 md:text-4xl">
-              Atendimento inteligente, respostas confiáveis.
+              Menos tempo procurando, mais tempo resolvendo.
             </h2>
             <p className="mt-5 text-sm leading-7 text-zinc-400 sm:mt-6 sm:text-base">
-              O {name} foi desenvolvido para modernizar o acesso à informação institucional. Ele
-              responde perguntas em linguagem natural com base exclusivamente nos documentos e
-              páginas cadastradas pela equipe responsável, sem inventar nem consultar fontes
-              externas.
+              Editais, calendários e páginas de serviço costumam estar espalhados em lugares
+              diferentes do site. O {name} reúne esse conteúdo num só lugar e responde em linguagem
+              natural, sem precisar navegar por menus ou abrir PDF nenhum.
             </p>
             <p className="mt-4 text-sm leading-7 text-zinc-400 sm:text-base">
-              Com avaliação de qualidade e memória de contexto, o {name} entrega uma experiência de
-              atendimento moderna e eficiente.
+              A conversa continua de onde parou: dá pra perguntar de novo, pedir mais detalhes ou
+              mudar de assunto que o contexto não se perde.
             </p>
           </div>
         </div>
@@ -122,8 +122,8 @@ export default function LandingPage({ settings = {} }) {
               },
               {
                 n: "03",
-                title: "Resposta precisa",
-                desc: `A IA gera a resposta com base apenas no conteúdo oficial. Nunca inventa informações.`,
+                title: "Resposta com fonte",
+                desc: `A resposta é montada a partir dos trechos encontrados, e você vê de qual página ou documento ela veio.`,
               },
             ].map(({ n, title, desc }) => (
               <div key={n} className="glass rounded-3xl p-5 sm:p-7">
@@ -175,10 +175,10 @@ export default function LandingPage({ settings = {} }) {
       <section className="relative z-10 border-t border-white/5 px-4 py-14 bg-black/10 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-4xl text-center">
           <h2 className="text-2xl font-medium text-zinc-100 sm:text-3xl md:text-4xl">
-            Pronto para testar o {name}?
+            Bora testar?
           </h2>
           <p className="mt-4 text-sm text-zinc-400 sm:text-base">
-            Faça uma pergunta e veja como o {name} responde com base no conhecimento institucional.
+            Manda a primeira pergunta e veja o {name} responder na hora.
           </p>
           <Link
             href="/chat"
