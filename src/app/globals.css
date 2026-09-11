@@ -103,9 +103,9 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(75rem 50rem at 50% 118%, rgb(var(--violet-rgb) / 0.22), transparent 68%),
-    radial-gradient(65rem 65rem at 115% 60%, rgb(var(--violet-deep-rgb) / 0.12), transparent 70%),
-    radial-gradient(55rem 55rem at -15% 40%, rgb(var(--indigo-rgb) / 0.09), transparent 70%);
+    radial-gradient(55rem 26rem at 50% 132%, rgb(var(--violet-rgb) / 0.26), transparent 65%),
+    radial-gradient(60rem 55rem at 120% 75%, rgb(var(--violet-deep-rgb) / 0.07), transparent 70%),
+    radial-gradient(50rem 50rem at -20% 50%, rgb(var(--indigo-rgb) / 0.05), transparent 70%);
 }
 
 /* ==========================================================================

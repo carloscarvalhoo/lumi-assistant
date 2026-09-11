@@ -95,7 +95,7 @@ export default function Select({
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={() => setOpen((v) => !v)}
-        className="glass glass-hover flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 outline-none transition"
+        className="flex w-full items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-sm text-zinc-300 outline-none transition hover:bg-white/[0.06] hover:text-zinc-100"
       >
         <span className="truncate">{selected?.label}</span>
         <svg
