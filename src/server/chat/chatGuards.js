@@ -5,35 +5,12 @@
 
 import { createHttpError } from "@/server/utils/errors";
 import { checkRateLimit } from "@/server/chat/rateLimitStore";
+import { getClientIp } from "@/server/utils/getClientIp";
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_BUFFER_MESSAGES = 24;
 const MAX_SINGLE_HISTORY_MESSAGE_LENGTH = 1500;
 const MAX_LONG_MEMORY_LENGTH = 6000;
-
-function getClientIp(request) {
-  // x-real-ip é preenchido pelo proxy da plataforma (Vercel) e não é
-  // sobrescrevível pelo cliente. Preferimos ele.
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp.trim();
-  }
-
-  // Em x-forwarded-for o cliente consegue PREPENDAR entradas falsas, mas a
-  // última entrada é a que o proxy confiável adicionou. Usamos essa.
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const parts = forwardedFor
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean);
-    if (parts.length) {
-      return parts[parts.length - 1];
-    }
-  }
-
-  return "local";
-}
 
 export async function checkChatRateLimit(request) {
   // Bypass para a bateria de avaliação (scripts/eval-accuracy.mjs). Nunca vale

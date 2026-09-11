@@ -1,10 +1,34 @@
 import { NextResponse } from "next/server";
 import { adminAuth } from "@/server/firebase/admin";
+import { checkRateLimit } from "@/server/chat/rateLimitStore";
+import { getClientIp } from "@/server/utils/getClientIp";
 
 const ADMIN_COOKIE_NAME = "firebase_admin_session";
 const SESSION_EXPIRES_IN = 1000 * 60 * 60 * 8;
 
+// Contra força bruta: bem mais apertado que o rate limit do chat, e num
+// namespace separado (mesmo IP não compartilha cota com o chat público).
+const LOGIN_MAX_ATTEMPTS = Number(process.env.LOGIN_RATE_LIMIT_MAX) || 8;
+const LOGIN_WINDOW_MS = Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
+
 export async function POST(request) {
+  const ip = getClientIp(request);
+  const { allowed, retryAfterMs } = await checkRateLimit(ip, {
+    namespace: "login",
+    max: LOGIN_MAX_ATTEMPTS,
+    windowMs: LOGIN_WINDOW_MS,
+  });
+
+  if (!allowed) {
+    return NextResponse.json(
+      {
+        error: "Muitas tentativas de login. Aguarde alguns minutos e tente novamente.",
+        retryAfterMs,
+      },
+      { status: 429 },
+    );
+  }
+
   try {
     const body = await request.json();
     const idToken = String(body?.idToken || "").trim();
