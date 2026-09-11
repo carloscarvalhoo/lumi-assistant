@@ -3,7 +3,10 @@
  * @module server/knowledge/reprocessKnowledgeFile
  */
 
-import { adminDb } from "@/server/firebase/admin";
+import {
+  getKnowledgeFile,
+  listKnowledgeFileDocs,
+} from "@/server/knowledge/knowledgeFilesRepository";
 import { splitTextIntoChunks } from "@/server/pdf/chunkText";
 import { persistKnowledgeDocument } from "@/server/knowledge/saveKnowledgeFile";
 import { loadRawText } from "@/server/knowledge/rawText";
@@ -22,11 +25,10 @@ import { logger } from "@/server/utils/logger";
 export async function reprocessKnowledgeFile(fileId) {
   if (!fileId) throw createHttpError("ID do documento não informado.", 400);
 
-  const fileRef = adminDb.collection("knowledgeFiles").doc(fileId);
-  const snapshot = await fileRef.get();
-  if (!snapshot.exists) throw createHttpError("Documento não encontrado.", 404);
+  const file = await getKnowledgeFile(fileId);
+  if (!file) throw createHttpError("Documento não encontrado.", 404);
 
-  const data = snapshot.data();
+  const data = file.data;
   const sourceUrl = data.sourceUrl || null;
 
   let text = "";
@@ -87,8 +89,8 @@ export async function reprocessAllKnowledgeFiles({ onProgress, fileIds } = {}) {
   if (Array.isArray(fileIds) && fileIds.length) {
     ids = fileIds;
   } else {
-    const snapshot = await adminDb.collection("knowledgeFiles").get();
-    ids = snapshot.docs.map((doc) => doc.id);
+    const docs = await listKnowledgeFileDocs();
+    ids = docs.map((doc) => doc.id);
   }
 
   const results = [];
@@ -97,8 +99,8 @@ export async function reprocessAllKnowledgeFiles({ onProgress, fileIds } = {}) {
     // custa muito perto do trabalho pesado de reprocessar (scrape + embeddings).
     let label = ids[i];
     try {
-      const snap = await adminDb.collection("knowledgeFiles").doc(ids[i]).get();
-      label = snap.data()?.sourceUrl || snap.data()?.originalName || ids[i];
+      const file = await getKnowledgeFile(ids[i]);
+      label = file?.data?.sourceUrl || file?.data?.originalName || ids[i];
     } catch {
       // Segue com o fileId como rótulo se a busca falhar.
     }

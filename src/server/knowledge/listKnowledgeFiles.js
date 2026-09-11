@@ -3,8 +3,8 @@
  * @module server/knowledge/listKnowledgeFiles
  */
 
-import { adminDb } from "@/server/firebase/admin";
 import { computeFreshness } from "@/server/knowledge/knowledgeMeta";
+import { listKnowledgeFileDocsOrderedByUpload } from "@/server/knowledge/knowledgeFilesRepository";
 
 function serializeDate(value) {
   if (!value) return null;
@@ -21,9 +21,9 @@ function serializeDate(value) {
 }
 
 export async function listKnowledgeFiles() {
-  const snapshot = await adminDb.collection("knowledgeFiles").orderBy("uploadedAt", "desc").get();
+  const docs = await listKnowledgeFileDocsOrderedByUpload();
 
-  return snapshot.docs.map((doc) => {
+  return docs.map((doc) => {
     const data = doc.data();
 
     return {

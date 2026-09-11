@@ -3,7 +3,7 @@
  * @module server/knowledge/saveKnowledgeUrl
  */
 
-import { adminDb } from "@/server/firebase/admin";
+import { findKnowledgeFileIdByUrl } from "@/server/knowledge/knowledgeFilesRepository";
 import { splitTextIntoChunks } from "@/server/pdf/chunkText";
 import { persistKnowledgeDocument } from "@/server/knowledge/saveKnowledgeFile";
 import { createHttpError } from "@/server/utils/errors";
@@ -28,16 +28,6 @@ function normalizeUrl(url) {
   }
 }
 
-/** Se já existe um documento para essa URL, devolve o id (para substituir). */
-async function findExistingByUrl(url) {
-  const snapshot = await adminDb
-    .collection("knowledgeFiles")
-    .where("sourceUrl", "==", url)
-    .limit(1)
-    .get();
-  return snapshot.empty ? null : snapshot.docs[0].id;
-}
-
 /**
  * Indexa (ou reindexa) uma página. Se a URL já existe, substitui os chunks
  * em vez de criar um documento duplicado.
@@ -50,7 +40,7 @@ export async function saveKnowledgeUrl(pageTitle, url, extractedText) {
 
   const normalizedUrl = normalizeUrl(url);
   const chunks = splitTextIntoChunks(text);
-  const existingId = await findExistingByUrl(normalizedUrl);
+  const existingId = await findKnowledgeFileIdByUrl(normalizedUrl);
 
   if (existingId) {
     logger.debug(`♻️ URL já indexada, substituindo chunks: ${normalizedUrl}`);

@@ -3,17 +3,13 @@
  * @module server/knowledge/knowledgeMeta
  */
 
-import { adminDb } from "@/server/firebase/admin";
 import { createHttpError } from "@/server/utils/errors";
 import { computeFreshness, DEFAULT_REVIEW_INTERVAL_MONTHS } from "@/server/knowledge/freshness";
-
-function fileRef(id) {
-  return adminDb.collection("knowledgeFiles").doc(id);
-}
+import { updateKnowledgeFile } from "@/server/knowledge/knowledgeFilesRepository";
 
 export async function markFileReviewed(id) {
   if (!id) throw createHttpError("ID não informado.", 400);
-  await fileRef(id).set({ lastReviewedAt: new Date(), updatedAt: new Date() }, { merge: true });
+  await updateKnowledgeFile(id, { lastReviewedAt: new Date(), updatedAt: new Date() });
 }
 
 export async function setFileValidity(id, { sourceDate, expiresAt, reviewIntervalMonths } = {}) {
@@ -26,7 +22,7 @@ export async function setFileValidity(id, { sourceDate, expiresAt, reviewInterva
     patch.reviewIntervalMonths = Number(reviewIntervalMonths) || DEFAULT_REVIEW_INTERVAL_MONTHS;
   }
 
-  await fileRef(id).set(patch, { merge: true });
+  await updateKnowledgeFile(id, patch);
 }
 
 // Reexporta o cálculo puro (fica em freshness.js para ser testável sem Firestore).

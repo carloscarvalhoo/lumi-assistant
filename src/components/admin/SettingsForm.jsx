@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useSettings } from "@/features/admin/settings/hooks/useSettings";
+import { Field, Input } from "@/components/admin/ui/Field";
+import PageTitle from "@/components/admin/ui/PageTitle";
+import Alert from "@/components/admin/ui/Alert";
+import EditableChipList from "@/components/admin/ui/EditableChipList";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
@@ -137,57 +141,51 @@ export default function SettingsForm() {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-7">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-zinc-100">Configurações</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Como o assistente se apresenta para os usuários.
-        </p>
-      </div>
+      <PageTitle
+        title="Configurações"
+        description="Como o assistente se apresenta para os usuários."
+      />
 
       <Field
         label="Nome da instituição"
         hint={`Usado no prompt do ${form.botName || "assistente"}.`}
       >
-        <input
+        <Input
           type="text"
           value={form.institutionName}
           onChange={(e) => handleChange("institutionName", e.target.value)}
           maxLength={200}
           placeholder="Ex: IFPR - Campus Ivaiporã"
-          className="input-field"
         />
       </Field>
 
       <Field label="Nome do assistente" hint="Como o bot vai se chamar.">
-        <input
+        <Input
           type="text"
           value={form.botName}
           onChange={(e) => handleChange("botName", e.target.value)}
           maxLength={50}
           placeholder="Ex: LUMI"
-          className="input-field"
         />
       </Field>
 
       <Field label="Mensagem de boas-vindas" hint="Exibida na tela inicial do chat.">
-        <input
+        <Input
           type="text"
           value={form.welcomeMessage}
           onChange={(e) => handleChange("welcomeMessage", e.target.value)}
           maxLength={300}
           placeholder="Ex: Como posso ajudar você hoje?"
-          className="input-field"
         />
       </Field>
 
       <Field label="Nota de rodapé" hint="Aviso de limitação exibido no chat.">
-        <input
+        <Input
           type="text"
           value={form.footerNote}
           onChange={(e) => handleChange("footerNote", e.target.value)}
           maxLength={300}
           placeholder={`Ex: O ${form.botName || "assistente"} pode cometer erros...`}
-          className="input-field"
         />
       </Field>
 
@@ -195,66 +193,57 @@ export default function SettingsForm() {
         label="Contatos oficiais"
         hint={`Mostrados quando o LUMI não resolve (fila de espera). Telefone, e-mail ou link. Máximo 8. (${(form.supportContacts || []).length}/8)`}
       >
-        <div className="space-y-2">
-          {(form.supportContacts || []).map((contact, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="glass-subtle flex-1 rounded-xl px-4 py-2 text-sm text-zinc-300">
-                <span className="text-zinc-500">{contact.label}:</span> {contact.value}
-              </span>
-              <button
-                type="button"
-                onClick={() => removeContact(i)}
-                aria-label={`Remover ${contact.label}`}
-                className="text-zinc-600 transition hover:text-red-400"
-              >
-                <DeleteOutlineIcon fontSize="small" />
-              </button>
-            </div>
-          ))}
-
-          {(form.supportContacts || []).length < 8 && (
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                type="text"
-                value={newContact.label}
-                onChange={(e) => setNewContact((c) => ({ ...c, label: e.target.value }))}
-                placeholder="Setor (ex: Secretaria Acadêmica)"
-                maxLength={60}
-                className="input-field sm:flex-1"
-              />
-              <input
-                type="text"
-                value={newContact.value}
-                onChange={(e) => setNewContact((c) => ({ ...c, value: e.target.value }))}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addContact())}
-                placeholder="Telefone, e-mail ou link"
-                maxLength={200}
-                className="input-field sm:flex-1"
-              />
-              <button
-                type="button"
-                onClick={addContact}
-                disabled={!newContact.label.trim() || !newContact.value.trim()}
-                className="glass glass-hover flex items-center justify-center gap-1 rounded-xl px-3 py-2 text-sm text-zinc-300 transition disabled:opacity-40"
-              >
-                <AddIcon fontSize="small" />
-              </button>
-            </div>
+        <EditableChipList
+          items={form.supportContacts || []}
+          onRemove={removeContact}
+          removeLabel={(contact) => `Remover ${contact.label}`}
+          maxItems={8}
+          renderChip={(contact) => (
+            <>
+              <span className="text-zinc-500">{contact.label}:</span> {contact.value}
+            </>
           )}
-        </div>
+        >
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              type="text"
+              value={newContact.label}
+              onChange={(e) => setNewContact((c) => ({ ...c, label: e.target.value }))}
+              placeholder="Setor (ex: Secretaria Acadêmica)"
+              maxLength={60}
+              className="sm:flex-1"
+            />
+            <Input
+              type="text"
+              value={newContact.value}
+              onChange={(e) => setNewContact((c) => ({ ...c, value: e.target.value }))}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addContact())}
+              placeholder="Telefone, e-mail ou link"
+              maxLength={200}
+              className="sm:flex-1"
+            />
+            <button
+              type="button"
+              onClick={addContact}
+              disabled={!newContact.label.trim() || !newContact.value.trim()}
+              className="glass glass-hover flex items-center justify-center gap-1 rounded-xl px-3 py-2 text-sm text-zinc-300 transition disabled:opacity-40"
+            >
+              <AddIcon fontSize="small" />
+            </button>
+          </div>
+        </EditableChipList>
       </Field>
 
       <Field
         label="Link de suporte (fallback)"
         hint="Usado só se não houver contatos oficiais acima."
       >
-        <input
+        <Input
           type="url"
           value={form.supportUrl}
           onChange={(e) => handleChange("supportUrl", e.target.value)}
           maxLength={500}
           placeholder="https://ifpr.edu.br/ivaipora/fale-conosco/"
-          className="input-field"
         />
       </Field>
 
@@ -262,45 +251,33 @@ export default function SettingsForm() {
         label="Perguntas sugeridas"
         hint={`Exibidas na tela inicial. Máximo 6. (${form.suggestedQuestions.length}/6)`}
       >
-        <div className="space-y-2">
-          {form.suggestedQuestions.map((q, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="glass-subtle flex-1 rounded-xl px-4 py-2 text-sm text-zinc-300">
-                {q}
-              </span>
-              <button
-                type="button"
-                onClick={() => removeQuestion(i)}
-                aria-label={`Remover pergunta: ${q}`}
-                className="text-zinc-600 hover:text-red-400 transition"
-              >
-                <DeleteOutlineIcon fontSize="small" />
-              </button>
-            </div>
-          ))}
-
-          {form.suggestedQuestions.length < 6 && (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newQuestion}
-                onChange={(e) => setNewQuestion(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addQuestion())}
-                placeholder="Nova pergunta sugerida..."
-                maxLength={70}
-                className="input-field flex-1"
-              />
-              <button
-                type="button"
-                onClick={addQuestion}
-                disabled={!newQuestion.trim()}
-                className="glass glass-hover flex items-center gap-1 rounded-xl px-3 py-2 text-sm text-zinc-300 transition disabled:opacity-40"
-              >
-                <AddIcon fontSize="small" />
-              </button>
-            </div>
-          )}
-        </div>
+        <EditableChipList
+          items={form.suggestedQuestions}
+          onRemove={removeQuestion}
+          removeLabel={(q) => `Remover pergunta: ${q}`}
+          maxItems={6}
+          renderChip={(q) => q}
+        >
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              value={newQuestion}
+              onChange={(e) => setNewQuestion(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addQuestion())}
+              placeholder="Nova pergunta sugerida..."
+              maxLength={70}
+              className="flex-1"
+            />
+            <button
+              type="button"
+              onClick={addQuestion}
+              disabled={!newQuestion.trim()}
+              className="glass glass-hover flex items-center gap-1 rounded-xl px-3 py-2 text-sm text-zinc-300 transition disabled:opacity-40"
+            >
+              <AddIcon fontSize="small" />
+            </button>
+          </div>
+        </EditableChipList>
       </Field>
 
       <Field
@@ -403,13 +380,13 @@ export default function SettingsForm() {
           <div className="mt-1 rounded-xl border border-white/[0.06] p-3">
             <p className="mb-2 text-xs font-medium text-zinc-400">Adicionar um modelo</p>
             <div className="flex gap-2">
-              <input
+              <Input
                 type="text"
                 value={newSpec}
                 onChange={(e) => setNewSpec(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addModel())}
                 placeholder="provedor:modelo"
-                className="input-field flex-1"
+                className="flex-1"
               />
               <button
                 type="button"
@@ -456,8 +433,12 @@ export default function SettingsForm() {
         </div>
       </Field>
 
-      {error && <p className="glass rounded-xl px-4 py-3 text-sm text-red-300">{error}</p>}
-      {success && <p className="glass rounded-xl px-4 py-3 text-sm text-emerald-300">{success}</p>}
+      <Alert variant="error" icon={false}>
+        {error}
+      </Alert>
+      <Alert variant="success" icon={false}>
+        {success}
+      </Alert>
 
       <button
         type="submit"
@@ -467,17 +448,5 @@ export default function SettingsForm() {
         {saving ? "Salvando..." : "Salvar configurações"}
       </button>
     </form>
-  );
-}
-
-function Field({ label, hint, children }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-zinc-300">
-        {label}
-        {hint && <span className="ml-2 font-normal text-zinc-600">{hint}</span>}
-      </label>
-      {children}
-    </div>
   );
 }

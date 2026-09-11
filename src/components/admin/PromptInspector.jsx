@@ -1,25 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-async function loadBase() {
-  const res = await fetch("/api/admin/prompt", { credentials: "include" });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || "Erro ao carregar o prompt.");
-  return data;
-}
-
-async function loadForQuestion(question) {
-  const res = await fetch("/api/admin/prompt", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ question }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || "Erro ao montar o prompt.");
-  return data;
-}
+import Alert from "@/components/admin/ui/Alert";
+import {
+  loadBasePrompt,
+  loadPromptForQuestion,
+} from "@/features/admin/prompt/services/promptClient";
 
 export default function PromptInspector() {
   const [result, setResult] = useState(null);
@@ -29,7 +15,7 @@ export default function PromptInspector() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    loadBase()
+    loadBasePrompt()
       .then(setResult)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -40,7 +26,9 @@ export default function PromptInspector() {
     setLoading(true);
     setError("");
     try {
-      setResult(question.trim() ? await loadForQuestion(question.trim()) : await loadBase());
+      setResult(
+        question.trim() ? await loadPromptForQuestion(question.trim()) : await loadBasePrompt(),
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -84,7 +72,9 @@ export default function PromptInspector() {
         </button>
       </form>
 
-      {error && <p className="glass rounded-xl px-4 py-3 text-sm text-red-300">{error}</p>}
+      <Alert variant="error" icon={false}>
+        {error}
+      </Alert>
 
       {result && (
         <div className="space-y-3">

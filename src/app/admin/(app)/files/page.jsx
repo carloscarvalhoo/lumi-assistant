@@ -3,7 +3,7 @@
 import { useState } from "react";
 import FileUploadCard from "@/components/admin/FileUploadCard";
 import UrlUploadCard from "@/components/admin/UrlUploadCard";
-import KnowledgeFileList from "@/components/admin/KnowledgeFileList";
+import KnowledgeFileList from "@/components/admin/knowledge-file-list/KnowledgeFileList";
 import EmbeddingLoader from "@/components/ui/EmbeddingLoader";
 import LoadingOverlay from "@/components/ui/LoadingOverlay";
 import Modal from "@/components/ui/Modal";

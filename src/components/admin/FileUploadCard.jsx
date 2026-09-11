@@ -2,8 +2,7 @@
 
 import { useRef, useState } from "react";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import Alert from "@/components/admin/ui/Alert";
 
 export default function FileUploadCard({ uploading, progress, error, successMessage, onUpload }) {
   const inputRef = useRef(null);
@@ -32,7 +31,7 @@ export default function FileUploadCard({ uploading, progress, error, successMess
   }
 
   return (
-    <section className="mb-8 rounded-[28px] border border-white/10 bg-[#111116]/90 p-6 shadow-2xl shadow-black/30">
+    <section className="mb-8 rounded-[28px] border border-white/10 bg-[var(--surface-elevated)]/90 p-6 shadow-2xl shadow-black/30">
       <div className="mb-5">
         <h2 className="text-lg font-semibold text-zinc-100">Enviar documento PDF</h2>
         <p className="mt-1 text-sm text-zinc-500">
@@ -101,19 +100,12 @@ export default function FileUploadCard({ uploading, progress, error, successMess
         </div>
       )}
 
-      {error && (
-        <div className="mt-4 flex items-start gap-2 glass rounded-xl border-red-500/25 px-4 py-3 text-sm text-red-200">
-          <ErrorOutlineIcon fontSize="small" className="mt-0.5 shrink-0" />
-          {error}
-        </div>
-      )}
-
-      {successMessage && (
-        <div className="mt-4 flex items-start gap-2 glass rounded-xl border-emerald-500/25 px-4 py-3 text-sm text-emerald-200">
-          <CheckCircleOutlineIcon fontSize="small" className="mt-0.5 shrink-0" />
-          {successMessage}
-        </div>
-      )}
+      <Alert variant="error" className="mt-4">
+        {error}
+      </Alert>
+      <Alert variant="success" className="mt-4">
+        {successMessage}
+      </Alert>
     </section>
   );
 }

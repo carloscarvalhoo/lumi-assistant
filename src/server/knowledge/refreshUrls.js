@@ -3,7 +3,7 @@
  * @module server/knowledge/refreshUrls
  */
 
-import { adminDb } from "@/server/firebase/admin";
+import { listKnowledgeFileDocs } from "@/server/knowledge/knowledgeFilesRepository";
 import { scrapePage } from "@/server/knowledge/scrapePage";
 import { splitTextIntoChunks } from "@/server/pdf/chunkText";
 import { persistKnowledgeDocument } from "@/server/knowledge/saveKnowledgeFile";
@@ -41,11 +41,9 @@ function originOf(url) {
  *   uma seleção explícita).
  */
 export async function refreshAllUrls({ onProgress, fileIds } = {}) {
-  const snapshot = await adminDb.collection("knowledgeFiles").get();
+  const docs = await listKnowledgeFileDocs();
   const idFilter = Array.isArray(fileIds) && fileIds.length ? new Set(fileIds) : null;
-  const urlDocs = snapshot.docs.filter(
-    (doc) => doc.data().sourceUrl && (!idFilter || idFilter.has(doc.id)),
-  );
+  const urlDocs = docs.filter((doc) => doc.data().sourceUrl && (!idFilter || idFilter.has(doc.id)));
 
   const summary = {
     total: urlDocs.length,

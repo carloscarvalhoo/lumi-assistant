@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { fetchAccount, updateAccount } from "@/features/admin/settings/services/accountClient";
+import { Field, Input } from "@/components/admin/ui/Field";
+import Alert from "@/components/admin/ui/Alert";
 
 export default function AccountForm() {
   const [email, setEmail] = useState("");
@@ -73,50 +75,42 @@ export default function AccountForm() {
         </p>
       </div>
 
-      <label className="block space-y-1.5">
-        <span className="block text-sm font-medium text-zinc-300">E-mail</span>
-        <input
+      <Field label="E-mail">
+        <Input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="username"
-          className="input-field"
         />
-      </label>
+      </Field>
 
-      <label className="block space-y-1.5">
-        <span className="block text-sm font-medium text-zinc-300">
-          Nova senha
-          <span className="ml-2 font-normal text-zinc-600">Deixe em branco para não trocar.</span>
-        </span>
-        <input
+      <Field label="Nova senha" hint="Deixe em branco para não trocar.">
+        <Input
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           autoComplete="new-password"
           minLength={8}
           placeholder="Mínimo 8 caracteres"
-          className="input-field"
         />
-      </label>
+      </Field>
 
-      <label className="block space-y-1.5">
-        <span className="block text-sm font-medium text-zinc-300">
-          Senha atual
-          <span className="ml-2 font-normal text-zinc-600">Obrigatória para confirmar.</span>
-        </span>
-        <input
+      <Field label="Senha atual" hint="Obrigatória para confirmar.">
+        <Input
           type="password"
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
           autoComplete="current-password"
           required
-          className="input-field"
         />
-      </label>
+      </Field>
 
-      {error && <p className="glass rounded-xl px-4 py-3 text-sm text-red-300">{error}</p>}
-      {success && <p className="glass rounded-xl px-4 py-3 text-sm text-emerald-300">{success}</p>}
+      <Alert variant="error" icon={false}>
+        {error}
+      </Alert>
+      <Alert variant="success" icon={false}>
+        {success}
+      </Alert>
 
       <button
         type="submit"

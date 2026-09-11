@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import SearchIcon from "@mui/icons-material/Search";
+import Alert from "@/components/admin/ui/Alert";
+import {
+  loadAiChain,
+  testResponse,
+} from "@/features/admin/response-tester/services/responseTesterClient";
 
 function ChunksUsed({ chunks }) {
   return (
@@ -51,10 +56,7 @@ export default function ResponseTester() {
   const [chain, setChain] = useState([]);
 
   useEffect(() => {
-    fetch("/api/admin/compare", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d?.chain && setChain(d.chain))
-      .catch(() => {});
+    loadAiChain().then((chain) => chain.length && setChain(chain));
   }, []);
 
   async function handleSubmit(e) {
@@ -67,17 +69,8 @@ export default function ResponseTester() {
     setResult(null);
     setComparison(null);
 
-    const endpoint = mode === "compare" ? "/api/admin/compare" : "/api/admin/search";
-
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ message: q }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error || "Erro ao testar.");
+      const data = await testResponse({ mode, question: q });
 
       if (mode === "compare") setComparison(data);
       else setResult(data);
@@ -140,11 +133,9 @@ export default function ResponseTester() {
         </button>
       </form>
 
-      {error && (
-        <div className="glass rounded-xl border-red-500/30 px-4 py-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
+      <Alert variant="error" icon={false}>
+        {error}
+      </Alert>
 
       {result && mode === "single" && (
         <div className="space-y-4">

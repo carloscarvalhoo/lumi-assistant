@@ -1,7 +1,5 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,10 +14,11 @@ const firebaseConfig = {
 // primeiro uso real (no navegador). Assim o `next build` consegue analisar e
 // pré-renderizar as páginas mesmo que as variáveis não estejam presentes
 // naquele momento (elas são injetadas no bundle em tempo de build).
+//
+// Só Auth é exposto aqui — o client nunca fala com Firestore/Storage
+// diretamente, tudo passa pelas rotas de API com o Admin SDK.
 let cachedApp = null;
 let cachedAuth = null;
-let cachedDb = null;
-let cachedStorage = null;
 
 export function getFirebaseApp() {
   if (!cachedApp) {
@@ -31,14 +30,4 @@ export function getFirebaseApp() {
 export function getFirebaseAuth() {
   if (!cachedAuth) cachedAuth = getAuth(getFirebaseApp());
   return cachedAuth;
-}
-
-export function getFirebaseDb() {
-  if (!cachedDb) cachedDb = getFirestore(getFirebaseApp());
-  return cachedDb;
-}
-
-export function getFirebaseStorage() {
-  if (!cachedStorage) cachedStorage = getStorage(getFirebaseApp());
-  return cachedStorage;
 }

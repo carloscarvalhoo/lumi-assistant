@@ -5,11 +5,11 @@ import SearchIcon from "@mui/icons-material/Search";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import LanguageIcon from "@mui/icons-material/Language";
 import { useConfirm } from "@/components/ui/ConfirmProvider";
 import LoadingOverlay from "@/components/ui/LoadingOverlay";
+import Alert from "@/components/admin/ui/Alert";
 
 function hostnameOf(url) {
   try {
@@ -91,7 +91,7 @@ export default function UrlUploadCard({
   }
 
   return (
-    <section className="mb-8 rounded-[28px] border border-white/10 bg-[#111116]/90 p-6 shadow-2xl shadow-black/30">
+    <section className="mb-8 rounded-[28px] border border-white/10 bg-[var(--surface-elevated)]/90 p-6 shadow-2xl shadow-black/30">
       <LoadingOverlay
         active={loadingMap}
         title="Mapeando o site…"
@@ -208,16 +208,12 @@ export default function UrlUploadCard({
         </div>
       )}
 
-      {error && (
-        <div className="mt-4 flex items-start gap-2 glass rounded-xl border-red-500/25 px-4 py-3 text-sm text-red-200">
-          <ErrorOutlineIcon fontSize="small" className="mt-0.5 shrink-0" /> {error}
-        </div>
-      )}
-      {successMessage && (
-        <div className="mt-4 flex items-start gap-2 glass rounded-xl border-emerald-500/25 px-4 py-3 text-sm text-emerald-200">
-          <CheckCircleOutlineIcon fontSize="small" className="mt-0.5 shrink-0" /> {successMessage}
-        </div>
-      )}
+      <Alert variant="error" className="mt-4">
+        {error}
+      </Alert>
+      <Alert variant="success" className="mt-4">
+        {successMessage}
+      </Alert>
     </section>
   );
 }
