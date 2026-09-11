@@ -20,11 +20,23 @@ const USER_AGENT =
  *   baixar o corpo.
  * @param {string} [conditional.etag]
  * @param {string} [conditional.lastModified]
- * @returns {Promise<null | {notModified: true} | {title: string, text: string, etag: (string|null), lastModified: (string|null)}>}
+ * @returns {Promise<
+ *   | { ok: false, reason: string }
+ *   | { ok: true, notModified: true }
+ *   | { ok: true, title: string, text: string, etag: (string|null), lastModified: (string|null) }
+ * >}
+ *   `reason` diz exatamente por que falhou (ex: "http_403", "timeout",
+ *   "network_error: ENOTFOUND ...") — importante pra diagnosticar bloqueios
+ *   de rede/WAF em produção, onde não dá pra simplesmente testar de novo.
  */
 export async function scrapePage(url, conditional = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  function fail(reason) {
+    logger.warn(`⚠️ scrape: ${url} falhou (${reason})`);
+    return { ok: false, reason };
+  }
 
   try {
     const headers = { "User-Agent": USER_AGENT, Accept: "text/html" };
@@ -38,30 +50,26 @@ export async function scrapePage(url, conditional = {}) {
     });
 
     if (response.status === 304) {
-      return { notModified: true };
+      return { ok: true, notModified: true };
     }
 
     if (!response.ok) {
-      logger.warn(`⚠️ scrape: ${url} respondeu ${response.status}`);
-      return null;
+      return fail(`http_${response.status}`);
     }
 
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("html") && !contentType.includes("text")) {
-      logger.warn(`⚠️ scrape: ${url} não é HTML (${contentType})`);
-      return null;
+      return fail(`tipo_invalido: ${contentType || "desconhecido"}`);
     }
 
     const contentLength = Number(response.headers.get("content-length") || 0);
     if (contentLength && contentLength > MAX_HTML_BYTES) {
-      logger.warn(`⚠️ scrape: ${url} muito grande (${contentLength} bytes)`);
-      return null;
+      return fail(`muito_grande: ${contentLength} bytes`);
     }
 
     const html = await response.text();
     if (html.length > MAX_HTML_BYTES) {
-      logger.warn(`⚠️ scrape: ${url} corpo muito grande (${html.length} bytes)`);
-      return null;
+      return fail(`corpo_muito_grande: ${html.length} bytes`);
     }
 
     const $ = cheerio.load(html);
@@ -78,19 +86,22 @@ export async function scrapePage(url, conditional = {}) {
       .trim();
 
     if (text.length < 50) {
-      logger.warn(`⚠️ scrape: ${url} conteúdo curto demais (${text.length} chars)`);
-      return null;
+      return fail(`conteudo_curto: ${text.length} chars`);
     }
 
     return {
+      ok: true,
       title,
       text,
       etag: response.headers.get("etag"),
       lastModified: response.headers.get("last-modified"),
     };
   } catch (error) {
-    logger.warn(`⚠️ scrape: falha em ${url}: ${error?.message}`);
-    return null;
+    const reason =
+      error?.name === "AbortError"
+        ? "timeout"
+        : `erro_de_rede: ${error?.cause?.code || error?.code || error?.message || "desconhecido"}`;
+    return fail(reason);
   } finally {
     clearTimeout(timer);
   }

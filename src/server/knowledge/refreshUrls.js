@@ -86,16 +86,19 @@ export async function refreshAllUrls({ onProgress } = {}) {
       });
       summary.checked += 1;
 
-      if (scraped?.notModified) {
+      if (scraped.notModified) {
         summary.unchanged += 1;
         await doc.ref.set({ lastCheckedAt: now, lastCheckFailed: false }, { merge: true });
         onProgress?.(i + 1, urlDocs.length);
         continue;
       }
 
-      if (!scraped) {
-        summary.failed.push({ fileId: doc.id, url });
-        await doc.ref.set({ lastCheckedAt: now, lastCheckFailed: true }, { merge: true });
+      if (!scraped.ok) {
+        summary.failed.push({ fileId: doc.id, url, error: scraped.reason });
+        await doc.ref.set(
+          { lastCheckedAt: now, lastCheckFailed: true, lastCheckError: scraped.reason || null },
+          { merge: true },
+        );
         onProgress?.(i + 1, urlDocs.length);
         continue;
       }

@@ -199,9 +199,12 @@ export function useKnowledgeFiles() {
     setSuccessMessage("");
     try {
       const r = await refreshUrls();
+      const sampleReason = r.failed?.[0]?.error;
       setSuccessMessage(
         `Verificação: ${r.unchanged} iguais, ${r.updated} atualizada(s)${
-          r.failed?.length ? `, ${r.failed.length} inacessível(is)` : ""
+          r.failed?.length
+            ? `, ${r.failed.length} inacessível(is)${sampleReason ? ` (ex: ${sampleReason})` : ""}`
+            : ""
         }.`,
       );
       await loadFiles();

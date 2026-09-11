@@ -41,8 +41,11 @@ export async function reprocessKnowledgeFile(fileId) {
 
   if (sourceUrl) {
     const scraped = await scrapePage(sourceUrl);
-    if (!scraped) {
-      throw createHttpError(`Não foi possível acessar a página: ${sourceUrl}`, 502);
+    if (!scraped.ok) {
+      throw createHttpError(
+        `Não foi possível acessar a página (${scraped.reason || "motivo desconhecido"}): ${sourceUrl}`,
+        502,
+      );
     }
     text = scraped.text;
     title = scraped.title || title;

@@ -28,8 +28,8 @@ export async function POST(request) {
       logger.debug(`🤖 Processando: ${url}`);
       const scraped = await scrapePage(url);
 
-      if (!scraped) {
-        skipped.push(url);
+      if (!scraped.ok) {
+        skipped.push({ url, reason: scraped.reason });
         continue;
       }
 
@@ -40,7 +40,9 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       message: `${processed} página(s) indexada(s).${
-        skipped.length ? ` ${skipped.length} ignorada(s) (inacessível ou vazia).` : ""
+        skipped.length
+          ? ` ${skipped.length} ignorada(s) (${skipped[0].reason || "inacessível ou vazia"}).`
+          : ""
       }`,
       processed,
       skipped,

@@ -25,11 +25,25 @@ export async function POST(request) {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
         signal: controller.signal,
       });
-    } finally {
+    } catch (fetchError) {
       clearTimeout(timer);
+      const reason =
+        fetchError?.name === "AbortError"
+          ? "tempo esgotado"
+          : fetchError?.cause?.code || fetchError?.code || fetchError?.message || "erro de rede";
+      return NextResponse.json(
+        { error: `Não foi possível acessar ${url} (${reason}).` },
+        { status: 502 },
+      );
     }
+    clearTimeout(timer);
 
-    if (!response.ok) throw new Error("Falha ao acessar o site principal.");
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: `${url} respondeu HTTP ${response.status}.` },
+        { status: 502 },
+      );
+    }
 
     const html = await response.text();
     const $ = cheerio.load(html);
