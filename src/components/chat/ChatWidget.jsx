@@ -82,15 +82,16 @@ export default function ChatWidget({ settings = {} }) {
       </div>
 
       {/* Header flutuante em vidro */}
-      <header className="glass absolute inset-x-0 top-0 z-20 flex h-16 items-center justify-between gap-3 rounded-none! border-0! px-4 sm:h-[68px] sm:px-6">
+      <header className="chat-header glass absolute inset-x-0 top-0 z-20 flex h-16 items-center justify-between gap-3 rounded-none! border-0! px-4 sm:h-[68px] sm:px-6">
         <Link
           href="/"
           className="shrink-0 text-lg font-semibold tracking-wide text-zinc-100 transition hover:text-zinc-300 sm:text-xl"
         >
-          {botName} IA
+          {botName}
         </Link>
 
         <div className="flex items-center gap-2.5">
+          <ModelPicker value={preferredModel} onChange={setPreferredModel} />
           {hasMessages && (
             <button
               type="button"
@@ -110,7 +111,6 @@ export default function ChatWidget({ settings = {} }) {
               </svg>
             </button>
           )}
-          <ModelPicker value={preferredModel} onChange={setPreferredModel} />
         </div>
       </header>
 

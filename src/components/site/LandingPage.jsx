@@ -11,7 +11,7 @@ export default function LandingPage({ settings = {} }) {
       <header className="glass-subtle fixed left-0 top-0 z-50 w-full border-x-0! border-t-0!">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:h-20 sm:px-6">
           <Link href="/" className="text-base font-semibold tracking-wide text-zinc-100 sm:text-lg">
-            {name} IA
+            {name}
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm font-medium text-zinc-400 md:flex">
