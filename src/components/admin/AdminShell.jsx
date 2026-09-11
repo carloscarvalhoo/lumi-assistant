@@ -61,7 +61,7 @@ export default function AdminShell({ botName, children }) {
   return (
     <div className="min-h-screen text-zinc-100">
       {/* Sidebar desktop */}
-      <aside className="glass-subtle fixed inset-y-0 left-0 hidden w-60 flex-col border-y-0 border-l-0 px-4 py-6 lg:flex">
+      <aside className="glass-subtle fixed inset-y-0 left-0 hidden w-60 flex-col border-y-0! border-l-0! px-4 py-6 lg:flex">
         <div className="flex items-center gap-2 px-3">
           <span className="text-sm font-semibold tracking-wide">{botName}</span>
           <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-500">
@@ -96,7 +96,7 @@ export default function AdminShell({ botName, children }) {
       </aside>
 
       {/* Topbar mobile */}
-      <header className="glass-subtle sticky top-0 z-40 flex items-center justify-between border-x-0 border-t-0 px-4 py-3 lg:hidden">
+      <header className="glass-subtle sticky top-0 z-40 flex items-center justify-between border-x-0! border-t-0! px-4 py-3 lg:hidden">
         <span className="text-sm font-semibold">{botName} · Admin</span>
         <button
           type="button"
@@ -120,7 +120,7 @@ export default function AdminShell({ botName, children }) {
       </header>
 
       {menuOpen && (
-        <div className="glass-strong border-x-0 border-t-0 px-4 py-3 lg:hidden">
+        <div className="glass-strong border-x-0! border-t-0! px-4 py-3 lg:hidden">
           <NavList pathname={pathname} onNavigate={() => setMenuOpen(false)} />
           <button
             type="button"

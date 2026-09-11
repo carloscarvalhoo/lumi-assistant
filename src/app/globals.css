@@ -7,12 +7,15 @@
   /* Paleta de acento — roxo é a cor principal do LUMI. Guardada como
      tripleto RGB (não hex) pra poder compor opacidade com
      `rgb(var(--violet-rgb) / 0.32)` em vez de retiptar o valor num rgba()
-     solto toda vez que precisar de transparência — troque só aqui. */
-  --violet-rgb: 124, 58, 237; /* #7c3aed */
-  --violet-bright-rgb: 168, 85, 247; /* #a855f7 */
-  --violet-deep-rgb: 109, 40, 217; /* #6d28d9 */
-  --indigo-rgb: 99, 102, 241; /* #6366f1 */
-  --cyan-rgb: 34, 211, 238; /* #22d3ee */
+     solto toda vez que precisar de transparência — troque só aqui.
+     IMPORTANTE: separado por ESPAÇO, não vírgula — a sintaxe moderna
+     `rgb(R G B / alpha)` não aceita misturar vírgula com a barra de alpha
+     (isso é CSS inválido e a regra inteira é descartada em silêncio). */
+  --violet-rgb: 124 58 237; /* #7c3aed */
+  --violet-bright-rgb: 168 85 247; /* #a855f7 */
+  --violet-deep-rgb: 109 40 217; /* #6d28d9 */
+  --indigo-rgb: 99 102 241; /* #6366f1 */
+  --cyan-rgb: 34 211 238; /* #22d3ee */
   --violet: rgb(var(--violet-rgb));
   --violet-bright: rgb(var(--violet-bright-rgb));
   --violet-deep: rgb(var(--violet-deep-rgb));
@@ -90,8 +93,8 @@ img {
 }
 
 /* ==========================================================================
-   AMBIENTE — fundo roxo bem discreto, atrás de tudo (z-index -1).
-   Serve só pra dar profundidade e um leve brilho por trás do vidro.
+   AMBIENTE — brilho roxo atrás de tudo (z-index -1), mais presente embaixo
+   (perto do input, tipo o glow do Gemini) e esmaecendo pro resto da tela.
    ========================================================================== */
 body::before {
   content: "";
@@ -100,9 +103,9 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(80rem 55rem at 50% 128%, rgb(var(--violet-rgb) / 0.055), transparent 70%),
-    radial-gradient(70rem 70rem at 120% 65%, rgb(var(--violet-deep-rgb) / 0.035), transparent 72%),
-    radial-gradient(60rem 60rem at -20% 45%, rgb(var(--indigo-rgb) / 0.03), transparent 72%);
+    radial-gradient(75rem 50rem at 50% 118%, rgb(var(--violet-rgb) / 0.22), transparent 68%),
+    radial-gradient(65rem 65rem at 115% 60%, rgb(var(--violet-deep-rgb) / 0.12), transparent 70%),
+    radial-gradient(55rem 55rem at -15% 40%, rgb(var(--indigo-rgb) / 0.09), transparent 70%);
 }
 
 /* ==========================================================================

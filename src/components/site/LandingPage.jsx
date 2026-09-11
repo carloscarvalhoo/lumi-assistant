@@ -8,7 +8,7 @@ export default function LandingPage({ settings = {} }) {
   return (
     <main className="relative min-h-screen overflow-hidden text-white">
       {/* Header */}
-      <header className="glass-subtle fixed left-0 top-0 z-50 w-full border-x-0 border-t-0">
+      <header className="glass-subtle fixed left-0 top-0 z-50 w-full border-x-0! border-t-0!">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:h-20 sm:px-6">
           <Link href="/" className="text-base font-semibold tracking-wide text-zinc-100 sm:text-lg">
             {name} IA
@@ -190,7 +190,7 @@ export default function LandingPage({ settings = {} }) {
       </section>
 
       {/* Footer */}
-      <footer className="glass-subtle relative z-10 border-x-0 border-b-0 px-4 py-8 sm:px-6 sm:py-10">
+      <footer className="glass-subtle relative z-10 border-x-0! border-b-0! px-4 py-8 sm:px-6 sm:py-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 text-xs text-zinc-600 sm:text-sm md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col gap-1">
             <p>{name} • Assistente Inteligente de Atendimento Institucional</p>
