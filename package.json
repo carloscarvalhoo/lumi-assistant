@@ -19,7 +19,7 @@
     "setup-vector-index": "node --env-file=.env.local scripts/setup-vector-index.mjs"
   },
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "overrides": {
     "jose": "4.15.9"
