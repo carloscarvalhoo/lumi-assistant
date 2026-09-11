@@ -29,16 +29,13 @@ export default function ModelPicker({ value, onChange }) {
   ];
 
   return (
-    <label className="flex items-center gap-2 text-sm text-zinc-500">
-      <span className="hidden sm:inline">Modelo</span>
-      <Select
-        value={value}
-        onChange={onChange}
-        options={options}
-        align="right"
-        ariaLabel="Preferência de modelo de IA"
-        className="w-[168px] sm:w-[210px]"
-      />
-    </label>
+    <Select
+      value={value}
+      onChange={onChange}
+      options={options}
+      align="right"
+      ariaLabel="Preferência de modelo de IA"
+      className="w-[168px] sm:w-[210px]"
+    />
   );
 }

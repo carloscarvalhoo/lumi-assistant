@@ -57,7 +57,10 @@ export default function Select({
     function onKey(event) {
       if (event.key === "Escape") setOpen(false);
     }
-    function onReflow() {
+    function onReflow(event) {
+      // Rolar a própria lista de opções dispara "scroll" no window (fase de
+      // captura) mesmo sem a página se mover — não pode fechar o menu nesse caso.
+      if (panelRef.current?.contains(event?.target)) return;
       setOpen(false);
     }
 
