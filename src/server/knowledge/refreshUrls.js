@@ -35,7 +35,7 @@ function originOf(url) {
  *  2. Requisição condicional (If-None-Match / If-Modified-Since) — 304 = igual.
  *  3. Hash do conteúdo — comparação final.
  *
- * @param {{ onProgress?: (done: number, total: number) => void, fileIds?: string[] }} [options]
+ * @param {{ onProgress?: (done: number, total: number, label?: string) => void, fileIds?: string[] }} [options]
  *   `fileIds` restringe a verificação a esses documentos; sem isso, verifica
  *   a base inteira (usado pelo cron — o clique manual no painel sempre exige
  *   uma seleção explícita).
@@ -81,7 +81,7 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
         summary.skippedBySitemap += 1;
         summary.unchanged += 1;
         await doc.ref.set({ lastCheckedAt: now, lastCheckFailed: false }, { merge: true });
-        onProgress?.(i + 1, urlDocs.length);
+        onProgress?.(i + 1, urlDocs.length, url);
         continue;
       }
 
@@ -95,7 +95,7 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
       if (scraped.notModified) {
         summary.unchanged += 1;
         await doc.ref.set({ lastCheckedAt: now, lastCheckFailed: false }, { merge: true });
-        onProgress?.(i + 1, urlDocs.length);
+        onProgress?.(i + 1, urlDocs.length, url);
         continue;
       }
 
@@ -105,7 +105,7 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
           { lastCheckedAt: now, lastCheckFailed: true, lastCheckError: scraped.reason || null },
           { merge: true },
         );
-        onProgress?.(i + 1, urlDocs.length);
+        onProgress?.(i + 1, urlDocs.length, url);
         continue;
       }
 
@@ -123,7 +123,7 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
           },
           { merge: true },
         );
-        onProgress?.(i + 1, urlDocs.length);
+        onProgress?.(i + 1, urlDocs.length, url);
         continue;
       }
 
@@ -170,7 +170,7 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
       }
     }
 
-    onProgress?.(i + 1, urlDocs.length);
+    onProgress?.(i + 1, urlDocs.length, url);
   }
 
   logger.info(

@@ -25,9 +25,11 @@ export default function MessageMeta({
   sourcesStale = false,
 }) {
   const hasSources = sources.length > 0;
-  // Sem fontes e sem aviso de desatualização (ex.: saudação, conversa fiada):
-  // não polui a resposta com chip de modelo nem nada.
-  if (!hasSources && !sourcesStale) return null;
+  // Sem fontes, sem aviso de desatualização e sem modelo pra mostrar (ex.:
+  // saudação, conversa fiada): não polui a resposta com nada. Mas se tiver
+  // modelUsed, mostra o chip mesmo sem fontes — é o caso de "não achei isso
+  // na base" (a resposta é real, só não citou fonte nenhuma).
+  if (!hasSources && !sourcesStale && !modelUsed) return null;
 
   return (
     <div className="mt-2 space-y-1.5">

@@ -106,34 +106,88 @@ export async function patchKnowledgeFile(id, payload) {
   return data;
 }
 
-export async function reindexAllFiles(fileIds) {
+/**
+ * Lê uma resposta SSE (event: .../data: {...}\n\n) chamando `onProgress` a
+ * cada evento "progress" e resolvendo com o payload do evento "done" (ou
+ * rejeitando com o do "error"). Usado por reindexAllFiles/refreshUrls, que
+ * levam minutos e agora mostram progresso em tempo real em vez de esperar a
+ * resposta inteira de uma vez.
+ */
+async function readProgressStream(response, onProgress) {
+  if (!response.body) {
+    // Fallback (ex.: ambiente sem streaming) — tenta ler como JSON comum.
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data?.error || "Erro na requisição.");
+    return data;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let sepIndex;
+    while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
+      const rawEvent = buffer.slice(0, sepIndex);
+      buffer = buffer.slice(sepIndex + 2);
+
+      const eventLine = rawEvent.split("\n").find((l) => l.startsWith("event:"));
+      const dataLine = rawEvent.split("\n").find((l) => l.startsWith("data:"));
+      if (!dataLine) continue;
+
+      const type = eventLine?.slice(6).trim() || "message";
+      let payload;
+      try {
+        payload = JSON.parse(dataLine.slice(5).trim());
+      } catch {
+        continue;
+      }
+
+      if (type === "progress") {
+        onProgress?.(payload);
+      } else if (type === "error") {
+        throw new Error(payload?.message || "Erro na requisição.");
+      } else if (type === "done") {
+        return payload;
+      }
+    }
+  }
+
+  throw new Error("Conexão encerrada antes de concluir.");
+}
+
+export async function reindexAllFiles(fileIds, onProgress) {
   const response = await fetch("/api/admin/reindex", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fileIds }),
   });
-  const data = await response.json().catch(() => ({}));
 
-  if (!response.ok) {
+  if (!response.ok && response.headers.get("content-type")?.includes("application/json")) {
+    const data = await response.json().catch(() => ({}));
     throw new Error(data?.error || "Erro ao reindexar.");
   }
 
-  return data;
+  return readProgressStream(response, onProgress);
 }
 
-export async function refreshUrls(fileIds) {
+export async function refreshUrls(fileIds, onProgress) {
   const response = await fetch("/api/admin/refresh-urls", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fileIds }),
   });
-  const data = await response.json().catch(() => ({}));
 
-  if (!response.ok) {
+  if (!response.ok && response.headers.get("content-type")?.includes("application/json")) {
+    const data = await response.json().catch(() => ({}));
     throw new Error(data?.error || "Erro ao verificar atualizações.");
   }
 
-  return data;
+  return readProgressStream(response, onProgress);
 }
 
 export async function logoutAdmin() {

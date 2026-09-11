@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ui/ConfirmProvider";
+import { isQuotaReason } from "@/lib/knowledge/friendlyScrapeError";
 import {
   deleteKnowledgeFile,
   getKnowledgeFiles,
@@ -23,6 +24,7 @@ export function useKnowledgeFiles() {
   const [reindexing, setReindexing] = useState(false);
   const [reindexingLabel, setReindexingLabel] = useState("");
   const [progress, setProgress] = useState(0);
+  const [bulkProgress, setBulkProgress] = useState(null);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [refreshResult, setRefreshResult] = useState(null);
@@ -178,18 +180,25 @@ export function useKnowledgeFiles() {
 
     setReindexing(true);
     setReindexingLabel("Reindexando fontes selecionadas");
+    setBulkProgress({ done: 0, total: fileIds.length, label: "" });
     setError("");
     setSuccessMessage("");
     try {
-      const r = await reindexAllFiles(fileIds);
+      const r = await reindexAllFiles(fileIds, setBulkProgress);
+      const failedList = r.failed || [];
+      const quotaFailed = failedList.filter((f) => isQuotaReason(f.error));
+      const realFailed = failedList.filter((f) => !isQuotaReason(f.error));
       setRefreshResult({
         title: "Reindexação concluída",
         stats: [
           { label: "processadas", value: r.ok ?? 0 },
           { label: "total", value: r.total ?? fileIds.length },
-          ...(r.failed?.length ? [{ label: "com erro", value: r.failed.length }] : []),
+          ...(quotaFailed.length
+            ? [{ label: "não processada(s) — limite de cota", value: quotaFailed.length }]
+            : []),
+          ...(realFailed.length ? [{ label: "com erro", value: realFailed.length }] : []),
         ],
-        failed: (r.failed || []).map((f) => ({ url: f.url || f.fileId, error: f.error })),
+        failed: failedList.map((f) => ({ url: f.url || f.fileId, error: f.error })),
       });
       await loadFiles();
       return true;
@@ -199,6 +208,7 @@ export function useKnowledgeFiles() {
     } finally {
       setReindexing(false);
       setReindexingLabel("");
+      setBulkProgress(null);
     }
   }
 
@@ -215,18 +225,25 @@ export function useKnowledgeFiles() {
 
     setReindexing(true);
     setReindexingLabel("Verificando fontes selecionadas");
+    setBulkProgress({ done: 0, total: fileIds.length, label: "" });
     setError("");
     setSuccessMessage("");
     try {
-      const r = await refreshUrls(fileIds);
+      const r = await refreshUrls(fileIds, setBulkProgress);
+      const failedList = r.failed || [];
+      const quotaFailed = failedList.filter((f) => isQuotaReason(f.error));
+      const realFailed = failedList.filter((f) => !isQuotaReason(f.error));
       setRefreshResult({
         title: "Verificação concluída",
         stats: [
           { label: "iguais", value: r.unchanged ?? 0 },
           { label: "atualizada(s)", value: r.updated ?? 0 },
-          ...(r.failed?.length ? [{ label: "inacessível(is)", value: r.failed.length }] : []),
+          ...(quotaFailed.length
+            ? [{ label: "não verificada(s) — limite de cota", value: quotaFailed.length }]
+            : []),
+          ...(realFailed.length ? [{ label: "inacessível(is)", value: realFailed.length }] : []),
         ],
-        failed: (r.failed || []).map((f) => ({ url: f.url, error: f.error })),
+        failed: failedList.map((f) => ({ url: f.url, error: f.error })),
       });
       await loadFiles();
       return true;
@@ -236,6 +253,7 @@ export function useKnowledgeFiles() {
     } finally {
       setReindexing(false);
       setReindexingLabel("");
+      setBulkProgress(null);
     }
   }
 
@@ -250,6 +268,7 @@ export function useKnowledgeFiles() {
     uploading,
     reindexing,
     reindexingLabel,
+    bulkProgress,
     progress,
     error,
     successMessage,

@@ -77,7 +77,7 @@ export async function reprocessKnowledgeFile(fileId) {
 
 /**
  * Reprocessa vários documentos, um a um.
- * @param {{ onProgress?: (done: number, total: number) => void, fileIds?: string[] }} [options]
+ * @param {{ onProgress?: (done: number, total: number, label?: string) => void, fileIds?: string[] }} [options]
  *   `fileIds` restringe a operação a esses documentos; sem isso, processa a
  *   base inteira (usado pelo cron/migração — nunca pelo clique manual no
  *   painel, que sempre exige uma seleção explícita).
@@ -93,6 +93,16 @@ export async function reprocessAllKnowledgeFiles({ onProgress, fileIds } = {}) {
 
   const results = [];
   for (let i = 0; i < ids.length; i++) {
+    // Busca um rótulo legível (URL ou nome) só pra mostrar progresso — não
+    // custa muito perto do trabalho pesado de reprocessar (scrape + embeddings).
+    let label = ids[i];
+    try {
+      const snap = await adminDb.collection("knowledgeFiles").doc(ids[i]).get();
+      label = snap.data()?.sourceUrl || snap.data()?.originalName || ids[i];
+    } catch {
+      // Segue com o fileId como rótulo se a busca falhar.
+    }
+
     try {
       const result = await reprocessKnowledgeFile(ids[i]);
       results.push({ ...result, ok: true });
@@ -100,7 +110,7 @@ export async function reprocessAllKnowledgeFiles({ onProgress, fileIds } = {}) {
       results.push({ fileId: ids[i], ok: false, error: error?.message });
       logger.warn(`⚠️ Falha ao reprocessar ${ids[i]}: ${error?.message}`);
     }
-    onProgress?.(i + 1, ids.length);
+    onProgress?.(i + 1, ids.length, label);
   }
 
   return {

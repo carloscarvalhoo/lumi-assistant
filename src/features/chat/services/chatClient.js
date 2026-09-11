@@ -61,18 +61,3 @@ export async function sendChatMessage(
   }
   return done;
 }
-
-export async function sendRating({ messageId, conversationId, rating, messageText, userName }) {
-  const response = await fetch("/api/chat/rate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messageId, conversationId, rating, messageText, userName }),
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data?.error || "Erro ao enviar avaliação.");
-  }
-
-  return response.json();
-}

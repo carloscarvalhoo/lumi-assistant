@@ -1,13 +1,11 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
-import RatingButtons from "@/components/chat/RatingButtons";
 import MessageMeta from "@/components/chat/MessageMeta";
 import QueueNotice from "@/components/chat/QueueNotice";
 
 export default function ChatMessage({
   message,
-  onRate,
   onRetry,
   supportUrl,
   supportLabel,
@@ -73,15 +71,6 @@ export default function ChatMessage({
             usedFallback={message.usedFallback}
             sources={message.sources}
             sourcesStale={message.sourcesStale}
-          />
-        )}
-
-        {!message.isError && onRate && (
-          <RatingButtons
-            messageId={message.id}
-            messageText={message.text}
-            currentRating={message.rating}
-            onRate={onRate}
           />
         )}
       </div>

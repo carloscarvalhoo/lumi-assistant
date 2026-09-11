@@ -45,6 +45,14 @@ export default function EmbeddingLoader({ active, count = 0, type = "url" }) {
     return () => clearInterval(t);
   }, [active]);
 
+  useEffect(() => {
+    if (!active) return undefined;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [active]);
+
   if (!active) return null;
 
   return (

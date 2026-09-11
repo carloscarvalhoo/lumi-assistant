@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { isPageGoneReason } from "@/lib/knowledge/friendlyScrapeError";
 
 const FRESHNESS = {
   fresh: { label: "Em dia", cls: "border-green-400/30 bg-green-400/10 text-green-300" },
@@ -18,9 +19,38 @@ function FreshnessBadge({ freshness }) {
   );
 }
 
+// "Vencido" (freshness) significa "conteúdo pode estar desatualizado, revise".
+// Isso é enganoso quando a página em si sumiu do site (404/410) — nesse caso
+// mostramos uma etiqueta própria em vez do "Vencido" genérico.
+function StatusBadge({ file }) {
+  if (getFileStatus(file) === "notFound") {
+    return (
+      <span className="rounded-full border border-red-500/40 bg-red-500/15 px-2 py-0.5 text-[11px] font-medium text-red-400">
+        Página não encontrada
+      </span>
+    );
+  }
+  return <FreshnessBadge freshness={file?.freshness} />;
+}
+
+// Mesma lógica do StatusBadge, mas como valor filtrável — "notFound" tem
+// prioridade sobre o freshness normal (ver comentário acima do StatusBadge).
+function getFileStatus(file) {
+  if (file?.lastCheckFailed && isPageGoneReason(file?.lastCheckError)) return "notFound";
+  return file?.freshness || "fresh";
+}
+
+const STATUS_FILTERS = [
+  { id: "all", label: "Todos os status" },
+  { id: "fresh", label: FRESHNESS.fresh.label },
+  { id: "dueForReview", label: FRESHNESS.dueForReview.label },
+  { id: "expired", label: FRESHNESS.expired.label },
+  { id: "notFound", label: "Página não encontrada" },
+];
+
 function DocActions({ file, onReprocess, onReview, onDelete }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex shrink-0 flex-nowrap gap-2">
       {onReview &&
         file?.id &&
         (file.freshness === "dueForReview" || file.freshness === "expired") && (
@@ -63,6 +93,10 @@ export default function KnowledgeFileList({
   const [openGroups, setOpenGroups] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  // Filtro de status (Em dia/Revisar/Vencido/Página não encontrada) é por
+  // domínio — cada site indexado tem seu próprio filtro, já que é dentro de
+  // um site com muitas páginas que faz sentido reduzir o que aparece.
+  const [groupStatusFilter, setGroupStatusFilter] = useState({});
 
   function getFileKey(file) {
     return (
@@ -313,6 +347,23 @@ export default function KnowledgeFileList({
     });
   }, [files, searchTerm, activeFilter]);
 
+  function getGroupStatusFilter(domain) {
+    return groupStatusFilter[domain] || "all";
+  }
+
+  function setGroupStatus(domain, status) {
+    setGroupStatusFilter((prev) => ({ ...prev, [domain]: status }));
+  }
+
+  function getGroupStatusCounts(groupFiles) {
+    const counts = { all: groupFiles.length, fresh: 0, dueForReview: 0, expired: 0, notFound: 0 };
+    groupFiles.forEach((file) => {
+      const status = getFileStatus(file);
+      counts[status] = (counts[status] || 0) + 1;
+    });
+    return counts;
+  }
+
   const groupedData = useMemo(() => {
     const siteGroupsMap = {};
     const pdfFiles = [];
@@ -533,75 +584,104 @@ export default function KnowledgeFileList({
                     </div>
                   </div>
 
+                  <div className="flex flex-wrap gap-2 border-t border-white/[0.06] px-4 py-3">
+                    {STATUS_FILTERS.map((status) => {
+                      const counts = getGroupStatusCounts(group.files);
+                      const activeGroupStatus = getGroupStatusFilter(group.domain);
+                      return (
+                        <button
+                          key={status.id}
+                          onClick={() => setGroupStatus(group.domain, status.id)}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                            activeGroupStatus === status.id
+                              ? "border-white bg-white text-black"
+                              : "border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/[0.07] hover:text-white"
+                          }`}
+                        >
+                          {status.label} ({counts[status.id] ?? 0})
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   {opened && (
                     <div className="space-y-2 border-t border-white/[0.06] px-4 pb-4 pt-3">
-                      {group.files.map((file, index) => {
-                        const fileKey = getFileKey(file) || index;
-                        const fileName = getFileName(file);
-                        const fileUrl = getFileUrl(file);
-                        const selected = isFileSelected(file);
-                        const details = getSiteDetails(file);
+                      {group.files
+                        .filter((file) => {
+                          const status = getGroupStatusFilter(group.domain);
+                          return status === "all" || getFileStatus(file) === status;
+                        })
+                        .map((file, index) => {
+                          const fileKey = getFileKey(file) || index;
+                          const fileName = getFileName(file);
+                          const fileUrl = getFileUrl(file);
+                          const selected = isFileSelected(file);
+                          const details = getSiteDetails(file);
 
-                        return (
-                          <div
-                            key={fileKey}
-                            className={`rounded-xl border border-white/10 p-3 transition ${
-                              selected ? "bg-white/[0.08]" : "bg-white/[0.03] hover:bg-white/[0.05]"
-                            }`}
-                          >
-                            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                              <div className="flex min-w-0 items-start gap-3">
-                                <input
-                                  type="checkbox"
-                                  checked={selected}
-                                  onChange={() => onToggleSelection(file)}
-                                  className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-white"
-                                />
+                          return (
+                            <div
+                              key={fileKey}
+                              className={`rounded-xl border border-white/10 p-3 transition ${
+                                selected
+                                  ? "bg-white/[0.08]"
+                                  : "bg-white/[0.03] hover:bg-white/[0.05]"
+                              }`}
+                            >
+                              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                <div className="flex min-w-0 flex-1 items-start gap-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={() => onToggleSelection(file)}
+                                    className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-white"
+                                  />
 
-                                <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <p className="truncate text-sm font-medium text-white">
-                                      {fileName}
-                                    </p>
-                                    <FreshnessBadge freshness={file.freshness} />
-                                  </div>
-
-                                  {fileUrl && (
-                                    <a
-                                      href={fileUrl}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="mt-1 block max-w-xl truncate text-xs text-blue-300 transition hover:text-blue-200 hover:underline"
-                                    >
-                                      {fileUrl}
-                                    </a>
-                                  )}
-
-                                  {details.length > 0 && (
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                      {details.map((detail) => (
-                                        <span
-                                          key={detail}
-                                          className="rounded-full bg-white/[0.05] px-2 py-1 text-[11px] text-zinc-400"
-                                        >
-                                          {detail}
-                                        </span>
-                                      ))}
+                                  <div className="min-w-0">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      <p className="min-w-0 truncate text-sm font-medium text-white">
+                                        {fileName}
+                                      </p>
+                                      <span className="shrink-0">
+                                        <StatusBadge file={file} />
+                                      </span>
                                     </div>
-                                  )}
-                                </div>
-                              </div>
 
-                              <DocActions
-                                file={file}
-                                onReprocess={onReprocess}
-                                onReview={onReview}
-                                onDelete={onDelete}
-                              />
+                                    {fileUrl && (
+                                      <a
+                                        href={fileUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="mt-1 block max-w-xl truncate text-xs text-blue-300 transition hover:text-blue-200 hover:underline"
+                                      >
+                                        {fileUrl}
+                                      </a>
+                                    )}
+
+                                    {details.length > 0 && (
+                                      <div className="mt-2 flex flex-wrap gap-2">
+                                        {details.map((detail) => (
+                                          <span
+                                            key={detail}
+                                            className="rounded-full bg-white/[0.05] px-2 py-1 text-[11px] text-zinc-400"
+                                          >
+                                            {detail}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <DocActions
+                                  file={file}
+                                  onReprocess={onReprocess}
+                                  onReview={onReview}
+                                  onDelete={onDelete}
+                                />
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
                     </div>
                   )}
                 </div>
@@ -640,14 +720,18 @@ export default function KnowledgeFileList({
                     />
 
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-medium text-white">{fileName}</p>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <p className="min-w-0 truncate text-sm font-medium text-white">
+                          {fileName}
+                        </p>
 
-                        <span className="rounded-full border border-red-400/30 bg-red-400/10 px-2 py-0.5 text-[11px] font-medium text-red-300">
+                        <span className="shrink-0 rounded-full border border-red-400/30 bg-red-400/10 px-2 py-0.5 text-[11px] font-medium text-red-300">
                           PDF
                         </span>
 
-                        <FreshnessBadge freshness={file.freshness} />
+                        <span className="shrink-0">
+                          <StatusBadge file={file} />
+                        </span>
                       </div>
 
                       {details.length > 0 && (

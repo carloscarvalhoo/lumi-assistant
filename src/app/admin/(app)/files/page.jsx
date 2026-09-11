@@ -19,6 +19,7 @@ export default function AdminFilesPage() {
     uploading,
     reindexing,
     reindexingLabel,
+    bulkProgress,
     progress,
     error,
     successMessage,
@@ -106,6 +107,7 @@ export default function AdminFilesPage() {
         active={reindexing}
         title={reindexingLabel || "Processando…"}
         subtitle="Isso pode levar alguns minutos. Não feche esta janela."
+        progress={bulkProgress}
       />
       <RefreshResultModal result={refreshResult} onClose={clearRefreshResult} />
 
@@ -172,10 +174,18 @@ export default function AdminFilesPage() {
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <h2 className="text-sm font-semibold text-zinc-200">Fontes ativas</h2>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={handleCheckUpdates} disabled={reindexing}>
+            <Button
+              size="sm"
+              onClick={handleCheckUpdates}
+              disabled={reindexing || selectedFiles.length === 0}
+            >
               Verificar atualizações{selectedFiles.length > 0 ? ` (${selectedFiles.length})` : ""}
             </Button>
-            <Button size="sm" onClick={handleReindexAll} disabled={reindexing}>
+            <Button
+              size="sm"
+              onClick={handleReindexAll}
+              disabled={reindexing || selectedFiles.length === 0}
+            >
               Reindexar{selectedFiles.length > 0 ? ` (${selectedFiles.length})` : " selecionadas"}
             </Button>
             {selectedFiles.length > 0 && (

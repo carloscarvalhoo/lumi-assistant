@@ -10,16 +10,8 @@ import ModelPicker from "@/components/chat/ModelPicker";
 import { useChat } from "@/features/chat/hooks/useChat";
 
 export default function ChatWidget({ settings = {} }) {
-  const {
-    messages,
-    loading,
-    error,
-    sendMessage,
-    rateMessage,
-    startNewChat,
-    preferredModel,
-    setPreferredModel,
-  } = useChat();
+  const { messages, loading, error, sendMessage, startNewChat, preferredModel, setPreferredModel } =
+    useChat();
 
   const messagesEndRef = useRef(null);
   const [toast, setToast] = useState("");
@@ -75,7 +67,6 @@ export default function ChatWidget({ settings = {} }) {
                   >
                     <ChatMessage
                       message={message}
-                      onRate={message.role === "model" ? rateMessage : null}
                       onRetry={prevUser ? () => sendMessage(prevUser.text) : undefined}
                       supportUrl={settings.supportUrl}
                       supportLabel={settings.supportLabel}
@@ -125,12 +116,30 @@ export default function ChatWidget({ settings = {} }) {
 
       {/* Input flutuante em vidro (só na conversa ativa) */}
       {hasMessages && (
-        <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-4 sm:px-6 sm:pb-6">
-          <div className="mx-auto w-full max-w-3xl">
-            <ChatInput loading={loading} onSend={sendMessage} />
-            <p className="mt-2 text-center text-xs text-zinc-500 sm:mt-3">{footerNote}</p>
+        <>
+          {/* Desfoque/gradiente por trás do input — sem isso, o texto das
+              mensagens aparece "vazando" atrás dele ao rolar a conversa. */}
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-36 backdrop-blur-md sm:h-40"
+            style={{
+              background:
+                "linear-gradient(to top, var(--background) 0%, var(--background) 35%, transparent 100%)",
+              // O backdrop-blur sozinho tem intensidade constante — sem a
+              // máscara ele liga/desliga de repente na borda de cima do bloco,
+              // aparecendo como uma linha. A máscara faz o próprio blur (não só
+              // a cor) desaparecer aos poucos, em vez de cortar.
+              maskImage: "linear-gradient(to top, black 0%, black 35%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to top, black 0%, black 35%, transparent 100%)",
+            }}
+            aria-hidden="true"
+          />
+          <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-4 sm:px-6 sm:pb-6">
+            <div className="mx-auto w-full max-w-3xl">
+              <ChatInput loading={loading} onSend={sendMessage} />
+              <p className="mt-2 text-center text-xs text-zinc-500 sm:mt-3">{footerNote}</p>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       <Toast message={toast} type="error" onClose={() => setToast("")} />

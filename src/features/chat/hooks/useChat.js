@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { sendChatMessage, sendRating } from "@/features/chat/services/chatClient";
+import { sendChatMessage } from "@/features/chat/services/chatClient";
 
 const PREFERRED_MODEL_KEY = "chat.preferredModel";
 
@@ -99,15 +99,6 @@ export function useChat() {
     [bufferHistory, loading, longMemory, preferredModel],
   );
 
-  const rateMessage = useCallback(async ({ messageId, rating, messageText }) => {
-    try {
-      await sendRating({ messageId, conversationId: conversationId.current, rating, messageText });
-      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, rating } : m)));
-    } catch (err) {
-      console.error("Erro ao avaliar:", err);
-    }
-  }, []);
-
   const startNewChat = useCallback(() => {
     conversationId.current = crypto.randomUUID();
     setMessages([]);
@@ -121,7 +112,6 @@ export function useChat() {
     loading,
     error,
     sendMessage,
-    rateMessage,
     startNewChat,
     preferredModel,
     setPreferredModel,
