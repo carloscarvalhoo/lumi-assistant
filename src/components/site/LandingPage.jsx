@@ -138,7 +138,34 @@ export default function LandingPage({ settings = {} }) {
         </div>
       </section>
 
-      {/* Recursos */}
+      {/* CTA intermediário */}
+      <section className="relative z-10 px-4 py-10 sm:px-6 sm:py-14">
+        <div className="glass mx-auto flex max-w-4xl flex-col items-center gap-5 rounded-3xl p-6 text-center sm:flex-row sm:justify-between sm:p-8 sm:text-left">
+          <div>
+            <p className="text-base font-semibold text-zinc-100 sm:text-lg">
+              Gratuito, sem cadastro, sem senha.
+            </p>
+            <p className="mt-1 text-sm text-zinc-400 sm:text-base">
+              É só abrir e perguntar: o {name} já responde na primeira mensagem, sem custo nenhum.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="glass-subtle rounded-full px-3 py-1 text-xs text-zinc-400">
+                Disponível 24h
+              </span>
+              <span className="glass-subtle rounded-full px-3 py-1 text-xs text-zinc-400">
+                Resposta em segundos
+              </span>
+            </div>
+          </div>
+          <Link
+            href="/chat"
+            className="w-full shrink-0 rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 sm:w-auto"
+          >
+            Abrir o {name}
+          </Link>
+        </div>
+      </section>
+
       {/* Segurança */}
       <section
         id="seguranca"
