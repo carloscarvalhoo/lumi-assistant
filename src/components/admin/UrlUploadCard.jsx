@@ -67,9 +67,11 @@ export default function UrlUploadCard({
       const data = await res.json();
       if (data.urls?.length) {
         setUrlsMapeadas(data.urls);
-        setMapMessage(
-          `${data.urls.length} página${data.urls.length > 1 ? "s" : ""} encontrada${data.urls.length > 1 ? "s" : ""}.`,
-        );
+        const plural = data.urls.length > 1 ? "s" : "";
+        const truncadoMsg = data.truncated
+          ? ` (o site tem ${data.total}; mostrando as ${data.urls.length} primeiras)`
+          : "";
+        setMapMessage(`${data.urls.length} página${plural} encontrada${plural}${truncadoMsg}.`);
       } else {
         setMapError(data.error || "Nenhuma página encontrada nesse endereço.");
       }

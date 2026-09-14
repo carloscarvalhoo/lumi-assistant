@@ -76,14 +76,16 @@ async function discoverSitemaps(origin) {
 }
 
 /**
- * Carrega um mapa { urlNormalizada -> Date(lastmod) } para toda a origem.
- * Retorna Map vazio se o site não tiver sitemap ou não trouxer lastmod.
+ * Percorre o(s) sitemap(s) de uma origem (seguindo índices recursivamente) e
+ * devolve todas as entradas <url> encontradas, cruas (loc + lastmod). Base
+ * compartilhada por loadSitemapLastmod (datas) e loadSitemapUrls (mapeamento
+ * do site inteiro no painel, sem depender do menu carregar via JS).
  *
- * @param {string} origin  ex: "https://ifpr.edu.br"
- * @returns {Promise<Map<string, Date>>}
+ * @param {string} origin
+ * @returns {Promise<{loc: string, lastmod: string|null}[]>}
  */
-export async function loadSitemapLastmod(origin) {
-  const result = new Map();
+async function walkSitemapEntries(origin) {
+  const entries = [];
   const seen = new Set();
   const queue = await discoverSitemaps(origin);
   let processed = 0;
@@ -104,18 +106,52 @@ export async function loadSitemapLastmod(origin) {
       continue;
     }
 
-    for (const { loc, lastmod } of parseUrlset(xml)) {
-      if (!lastmod) continue;
-      const date = new Date(lastmod);
-      if (Number.isNaN(date.getTime())) continue;
-      result.set(normalizeUrl(loc), date);
-    }
+    entries.push(...parseUrlset(xml));
+  }
+
+  return entries;
+}
+
+/**
+ * Carrega um mapa { urlNormalizada -> Date(lastmod) } para toda a origem.
+ * Retorna Map vazio se o site não tiver sitemap ou não trouxer lastmod.
+ *
+ * @param {string} origin  ex: "https://ifpr.edu.br"
+ * @returns {Promise<Map<string, Date>>}
+ */
+export async function loadSitemapLastmod(origin) {
+  const result = new Map();
+  for (const { loc, lastmod } of await walkSitemapEntries(origin)) {
+    if (!lastmod) continue;
+    const date = new Date(lastmod);
+    if (Number.isNaN(date.getTime())) continue;
+    result.set(normalizeUrl(loc), date);
   }
 
   if (result.size) {
     logger.debug(`🗺️ sitemap de ${origin}: ${result.size} URLs com lastmod`);
   }
   return result;
+}
+
+/**
+ * Lista bruta (sem normalizar) de todas as URLs do sitemap de uma origem —
+ * usado pra mapear o site inteiro no painel, já que nem todo site expõe os
+ * links de navegação no HTML estático (menus montados via JS, por exemplo).
+ * Retorna [] se o site não tiver sitemap.
+ *
+ * @param {string} origin
+ * @returns {Promise<string[]>}
+ */
+export async function loadSitemapUrls(origin) {
+  const urls = new Set();
+  for (const { loc } of await walkSitemapEntries(origin)) {
+    urls.add(loc);
+  }
+  if (urls.size) {
+    logger.debug(`🗺️ sitemap de ${origin}: ${urls.size} URLs encontradas`);
+  }
+  return [...urls];
 }
 
 export { normalizeUrl as normalizeSitemapUrl };
