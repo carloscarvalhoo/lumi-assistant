@@ -71,6 +71,7 @@ export function useChat() {
           usedFallback: Boolean(result.usedFallback),
           sources: Array.isArray(result.sources) ? result.sources : [],
           sourcesStale: Boolean(result.sourcesStale),
+          citations: Array.isArray(result.citations) ? result.citations : [],
         });
         if (result.bufferHistory) setBufferHistory(result.bufferHistory);
         setLongMemory(result.longMemory || null);

@@ -70,8 +70,10 @@ export function useKnowledgeFiles() {
       await indexKnowledgeUrl(urls);
       setSuccessMessage(`${urls.length} página(s) indexada(s).`);
       await loadFiles();
+      return true;
     } catch (err) {
       setError(err?.message || "Erro ao indexar as URLs.");
+      return false;
     } finally {
       setUploading(false);
     }

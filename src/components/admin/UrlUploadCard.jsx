@@ -92,6 +92,18 @@ export default function UrlUploadCard({
     setUrlsSelecionadas(urlsSelecionadas.length === urlsMapeadas.length ? [] : [...urlsMapeadas]);
   }
 
+  async function handleIndexar() {
+    if (urlsSelecionadas.length === 0) return;
+    const ok = await onUploadUrl(urlsSelecionadas);
+    // Some bem-sucedido: a lista de páginas mapeadas não serve mais pra nada
+    // (já foram indexadas), então some da tela em vez de ficar ali parada.
+    if (ok) {
+      setUrlsMapeadas([]);
+      setUrlsSelecionadas([]);
+      setMapMessage("");
+    }
+  }
+
   return (
     <section className="mb-8 rounded-[28px] border border-white/10 bg-[var(--surface-elevated)]/90 p-6 shadow-2xl shadow-black/30">
       <LoadingOverlay
@@ -194,7 +206,7 @@ export default function UrlUploadCard({
 
           <button
             type="button"
-            onClick={() => urlsSelecionadas.length > 0 && onUploadUrl(urlsSelecionadas)}
+            onClick={handleIndexar}
             disabled={uploading || urlsSelecionadas.length === 0}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
           >

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkAdminAccess } from "@/server/auth/checkAdminAccess";
 import { saveKnowledgeUrl } from "@/server/knowledge/saveKnowledgeUrl";
 import { scrapePage } from "@/server/knowledge/scrapePage";
+import { saveKnowledgePdfLinks } from "@/server/knowledge/saveKnowledgePdfLink";
 import { logger } from "@/server/utils/logger";
 
 export const runtime = "nodejs";
@@ -22,7 +23,9 @@ export async function POST(request) {
     }
 
     let processed = 0;
+    let pdfsProcessed = 0;
     const skipped = [];
+    const pdfsSkipped = [];
 
     for (const url of urlsSelecionadas) {
       logger.debug(`🤖 Processando: ${url}`);
@@ -35,7 +38,17 @@ export async function POST(request) {
 
       await saveKnowledgeUrl(scraped.title, url, scraped.text);
       processed += 1;
+
+      // Editais, formulários, portarias etc linkados na página — baixa e
+      // indexa cada um como documento próprio, igual o upload manual de PDF.
+      if (scraped.pdfLinks?.length) {
+        const pdfResult = await saveKnowledgePdfLinks(scraped.pdfLinks);
+        pdfsProcessed += pdfResult.ok;
+        pdfsSkipped.push(...pdfResult.failed);
+      }
     }
+
+    const pdfMsg = pdfsProcessed ? ` ${pdfsProcessed} PDF(s) linkado(s) também indexado(s).` : "";
 
     return NextResponse.json({
       success: true,
@@ -43,9 +56,11 @@ export async function POST(request) {
         skipped.length
           ? ` ${skipped.length} ignorada(s) (${skipped[0].reason || "inacessível ou vazia"}).`
           : ""
-      }`,
+      }${pdfMsg}`,
       processed,
       skipped,
+      pdfsProcessed,
+      pdfsSkipped,
     });
   } catch (error) {
     logger.error("Erro no processamento das URLs:", error);

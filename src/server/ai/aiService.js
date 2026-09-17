@@ -23,6 +23,18 @@ function createTurn(role, text) {
   return { role, text: String(text || "").trim() };
 }
 
+/**
+ * Uma entrada por chunk, na MESMA ordem/numeração que formatKnowledgeContext
+ * usa pro modelo ("[1] Fonte: ...", "[2] Fonte: ..."). O front usa isso pra
+ * transformar as citações [N] que o modelo escreve em links de verdade.
+ */
+function buildCitations(knowledgeChunks) {
+  return knowledgeChunks.map((chunk) => ({
+    name: chunk.sourceFileName || "Documento",
+    url: chunk.sourceUrl || null,
+  }));
+}
+
 const STALE_CAVEAT =
   "⚠️ ATENÇÃO: uma ou mais fontes abaixo estão marcadas como possivelmente " +
   "desatualizadas (passaram da data de revisão). Ao responder, avise o usuário " +
@@ -157,6 +169,7 @@ export const aiService = {
       usedFallback: response.usedFallback,
       sources: sourcesInfo.sources,
       sourcesStale: sourcesInfo.hasExpired,
+      citations: buildCitations(knowledgeChunks),
     };
   },
 
@@ -164,7 +177,7 @@ export const aiService = {
    * Igual ao sendMessage, mas em streaming.
    * Emite: { type: "delta", value }
    *        { type: "done", text, bufferHistory, longMemory, didSummarize,
-   *                 modelUsed, providerUsed, usedFallback, sources }
+   *                 modelUsed, providerUsed, usedFallback, sources, citations }
    *        { type: "error", error }
    */
   async *sendMessageStream(
@@ -250,6 +263,7 @@ export const aiService = {
       usedFallback: meta.usedFallback,
       sources: sourcesInfo.sources,
       sourcesStale: sourcesInfo.hasExpired,
+      citations: buildCitations(knowledgeChunks),
     };
   },
 };

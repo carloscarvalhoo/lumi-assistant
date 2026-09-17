@@ -4,6 +4,19 @@ import rehypeSanitize from "rehype-sanitize";
 import MessageMeta from "@/components/chat/MessageMeta";
 import QueueNotice from "@/components/chat/QueueNotice";
 
+// Troca "[2]" (número da fonte que a IA cita no texto) por um link markdown de
+// verdade, usando a URL daquela fonte em `citations` (mesma numeração que o
+// backend manda pro modelo). Número sem fonte correspondente ou sem URL vira
+// texto puro, sem colchete, pra não sobrar link quebrado.
+function linkifyCitations(text, citations) {
+  if (!text || !Array.isArray(citations) || citations.length === 0) return text;
+  return text.replace(/\[(\d+)\]/g, (match, numStr) => {
+    const citation = citations[Number(numStr) - 1];
+    if (!citation?.url) return "";
+    return `[[${numStr}]](${citation.url})`;
+  });
+}
+
 export default function ChatMessage({
   message,
   onRetry,
@@ -61,7 +74,7 @@ export default function ChatMessage({
       <div className="max-w-full sm:max-w-[780px]">
         <div className={`chat-md ${message.isError ? "text-red-400" : ""}`}>
           <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-            {message.text}
+            {linkifyCitations(message.text, message.citations)}
           </ReactMarkdown>
         </div>
 

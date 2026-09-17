@@ -7,6 +7,7 @@ import { listKnowledgeFileDocs } from "@/server/knowledge/knowledgeFilesReposito
 import { scrapePage } from "@/server/knowledge/scrapePage";
 import { splitTextIntoChunks } from "@/server/pdf/chunkText";
 import { persistKnowledgeDocument } from "@/server/knowledge/saveKnowledgeFile";
+import { saveKnowledgePdfLinks } from "@/server/knowledge/saveKnowledgePdfLink";
 import { loadSitemapLastmod, normalizeSitemapUrl } from "@/server/knowledge/sitemap";
 import { hashContent } from "@/server/utils/hash";
 import { logger } from "@/server/utils/logger";
@@ -148,6 +149,17 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
         extractedText: scraped.text,
         chunks,
       });
+
+      // Página mudou -> os PDFs linkados nela também podem ter mudado
+      // (edital novo, formulário atualizado etc). Falha num PDF não impede
+      // o resto de continuar rolando.
+      if (scraped.pdfLinks?.length) {
+        try {
+          await saveKnowledgePdfLinks(scraped.pdfLinks);
+        } catch (error) {
+          logger.warn(`⚠️ Falha ao indexar PDFs linkados em ${url}: ${error?.message}`);
+        }
+      }
 
       summary.updated += 1;
       if (hadHash) summary.changedTitles.push(scraped.title || url);

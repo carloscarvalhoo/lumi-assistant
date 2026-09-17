@@ -74,8 +74,9 @@ export default function AdminFilesPage() {
   async function handleUploadUrl(urls) {
     setUploadingType("url");
     setUploadingCount(Array.isArray(urls) ? urls.length : 1);
-    await uploadUrl(urls);
+    const ok = await uploadUrl(urls);
     setUploadingCount(0);
+    return ok;
   }
 
   async function handleUploadFile(file) {
