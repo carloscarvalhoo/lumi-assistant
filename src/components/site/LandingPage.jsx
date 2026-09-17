@@ -44,8 +44,9 @@ export default function LandingPage({ settings = {} }) {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-sm leading-7 text-zinc-400 sm:mt-8 sm:text-base md:text-lg">
-            O assistente virtual da {institution}. Pergunte sobre editais, cursos, prazos e serviços
-            e receba a resposta na hora, em uma conversa.
+            O assistente virtual da {institution}. Alunos e servidores podem perguntar sobre
+            editais, cursos, prazos, benefícios e serviços, e receber a resposta na hora, em uma
+            conversa.
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row sm:gap-4">
@@ -81,9 +82,9 @@ export default function LandingPage({ settings = {} }) {
               Menos tempo procurando, mais tempo resolvendo.
             </h2>
             <p className="mt-5 text-sm leading-7 text-zinc-400 sm:mt-6 sm:text-base">
-              Editais, calendários e páginas de serviço costumam estar espalhados em lugares
-              diferentes do site. O {name} reúne esse conteúdo num só lugar e responde em linguagem
-              natural, sem precisar navegar por menus ou abrir PDF nenhum.
+              Editais, calendários, benefícios do servidor e páginas de serviço costumam estar
+              espalhados em lugares diferentes do site. O {name} reúne esse conteúdo num só lugar e
+              responde em linguagem natural, sem precisar navegar por menus ou abrir PDF nenhum.
             </p>
             <p className="mt-4 text-sm leading-7 text-zinc-400 sm:text-base">
               A conversa continua de onde parou: dá pra perguntar de novo, pedir mais detalhes ou
