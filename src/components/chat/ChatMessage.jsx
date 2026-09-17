@@ -17,6 +17,16 @@ function linkifyCitations(text, citations) {
   });
 }
 
+// Links de citação abrem em nova aba, senão o usuário perde a conversa ao
+// tentar voltar pelo botão "voltar" do navegador.
+const markdownComponents = {
+  a: ({ href, children, ...props }) => (
+    <a href={href} target="_blank" rel="noreferrer" {...props}>
+      {children}
+    </a>
+  ),
+};
+
 export default function ChatMessage({
   message,
   onRetry,
@@ -73,7 +83,11 @@ export default function ChatMessage({
     <div className="group flex justify-start">
       <div className="max-w-full sm:max-w-[780px]">
         <div className={`chat-md ${message.isError ? "text-red-400" : ""}`}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeSanitize]}
+            components={markdownComponents}
+          >
             {linkifyCitations(message.text, message.citations)}
           </ReactMarkdown>
         </div>
