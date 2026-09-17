@@ -11,6 +11,7 @@ import { splitTextIntoChunks } from "@/server/pdf/chunkText";
 import { persistKnowledgeDocument } from "@/server/knowledge/saveKnowledgeFile";
 import { loadRawText } from "@/server/knowledge/rawText";
 import { scrapePage } from "@/server/knowledge/scrapePage";
+import { saveKnowledgeDocumentLinks } from "@/server/knowledge/saveKnowledgeDocumentLink";
 import { createHttpError } from "@/server/utils/errors";
 import { logger } from "@/server/utils/logger";
 
@@ -33,6 +34,7 @@ export async function reprocessKnowledgeFile(fileId) {
 
   let text = "";
   let title = data.originalName || "documento";
+  let documentLinks = [];
   const meta = {
     contentType: data.contentType,
     size: data.size,
@@ -51,6 +53,7 @@ export async function reprocessKnowledgeFile(fileId) {
     }
     text = scraped.text;
     title = scraped.title || title;
+    documentLinks = scraped.documentLinks || [];
     meta.lastCheckedAt = new Date();
   } else {
     text = await loadRawText(fileId);
@@ -73,6 +76,17 @@ export async function reprocessKnowledgeFile(fileId) {
     extractedText: text,
     chunks,
   });
+
+  // Reindexar é a via pra "recuperar" documentos linkados (PDF/docx) numa
+  // página que já estava na base antes desse recurso existir — a checagem
+  // de mudança do "Verificar atualizações" pularia ela por não ter mudado.
+  if (documentLinks.length) {
+    try {
+      await saveKnowledgeDocumentLinks(documentLinks);
+    } catch (error) {
+      logger.warn(`⚠️ Falha ao indexar documentos linkados em ${sourceUrl}: ${error?.message}`);
+    }
+  }
 
   return { fileId, chunksCount: result.chunksCount, changed: true };
 }

@@ -36,6 +36,12 @@ function originOf(url) {
  *  2. Requisição condicional (If-None-Match / If-Modified-Since) — 304 = igual.
  *  3. Hash do conteúdo — comparação final.
  *
+ * Os atalhos 1 e 2 (pular sem baixar / 304) só valem depois que os
+ * documentos linkados da página (PDF/docx) já foram checados alguma vez —
+ * `documentLinksChecked`. Enquanto isso não aconteceu, força passar pela
+ * checagem completa pra achar documentos que a página já tinha antes desse
+ * recurso existir.
+ *
  * @param {{ onProgress?: (done: number, total: number, label?: string) => void, fileIds?: string[] }} [options]
  *   `fileIds` restringe a verificação a esses documentos; sem isso, verifica
  *   a base inteira (usado pelo cron — o clique manual no painel sempre exige
@@ -74,9 +80,21 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
     try {
       const sitemap = sitemaps.get(originOf(url));
       const lastmod = sitemap?.get(normalizeSitemapUrl(url)) || null;
+      // Só usamos os atalhos "pula sem baixar" (sitemap / 304) quando os
+      // documentos linkados dessa página já foram checados alguma vez. Isso
+      // garante que toda página indexada de antes desse recurso existir
+      // passe por UMA verificação completa de documentos, mesmo sem ter
+      // mudado — depois disso volta a ser rápido como antes.
+      const docsAlreadyChecked = Boolean(data.documentLinksChecked);
 
       // 1) Sitemap diz que não mudou desde a última checagem → pula sem baixar.
-      if (lastmod && lastChecked && data.contentHash && lastmod <= lastChecked) {
+      if (
+        docsAlreadyChecked &&
+        lastmod &&
+        lastChecked &&
+        data.contentHash &&
+        lastmod <= lastChecked
+      ) {
         summary.skippedBySitemap += 1;
         summary.unchanged += 1;
         await doc.ref.set({ lastCheckedAt: now, lastCheckFailed: false }, { merge: true });
@@ -84,11 +102,15 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
         continue;
       }
 
-      // 2) + 3) Baixa (com requisição condicional) e compara hash.
-      const scraped = await scrapePage(url, {
-        etag: data.httpEtag || undefined,
-        lastModified: data.httpLastModified || undefined,
-      });
+      // 2) + 3) Baixa (com requisição condicional, só se já checamos os
+      // documentos antes — senão precisamos do corpo pra ver os links) e
+      // compara hash.
+      const scraped = await scrapePage(
+        url,
+        docsAlreadyChecked
+          ? { etag: data.httpEtag || undefined, lastModified: data.httpLastModified || undefined }
+          : {},
+      );
       summary.checked += 1;
 
       if (scraped.notModified) {
@@ -112,6 +134,16 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
       const hadHash = Boolean(data.contentHash);
 
       if (hadHash && newHash === data.contentHash) {
+        // Conteúdo da página não mudou, mas se ainda não tínhamos checado os
+        // documentos linkados dela, aproveita que já baixamos o corpo agora.
+        if (!docsAlreadyChecked && scraped.documentLinks?.length) {
+          try {
+            await saveKnowledgeDocumentLinks(scraped.documentLinks);
+          } catch (error) {
+            logger.warn(`⚠️ Falha ao indexar documentos linkados em ${url}: ${error?.message}`);
+          }
+        }
+
         summary.unchanged += 1;
         await doc.ref.set(
           {
@@ -119,6 +151,7 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
             lastCheckFailed: false,
             httpEtag: scraped.etag || data.httpEtag || null,
             httpLastModified: scraped.lastModified || data.httpLastModified || null,
+            documentLinksChecked: true,
           },
           { merge: true },
         );
@@ -145,6 +178,7 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
           sourceUpdatedAt: lastmod || now,
           contentChangedAt: hadHash ? now : data.contentChangedAt || null,
           needsReview: hadHash, // marca revisão só se REALMENTE mudou
+          documentLinksChecked: true,
         },
         extractedText: scraped.text,
         chunks,
