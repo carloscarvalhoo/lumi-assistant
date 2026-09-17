@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { checkAdminAccess } from "@/server/auth/checkAdminAccess";
 import { saveKnowledgeUrl } from "@/server/knowledge/saveKnowledgeUrl";
 import { scrapePage } from "@/server/knowledge/scrapePage";
-import { saveKnowledgePdfLinks } from "@/server/knowledge/saveKnowledgePdfLink";
+import { saveKnowledgeDocumentLinks } from "@/server/knowledge/saveKnowledgeDocumentLink";
 import { logger } from "@/server/utils/logger";
 
 export const runtime = "nodejs";
@@ -39,16 +39,19 @@ export async function POST(request) {
       await saveKnowledgeUrl(scraped.title, url, scraped.text);
       processed += 1;
 
-      // Editais, formulários, portarias etc linkados na página — baixa e
-      // indexa cada um como documento próprio, igual o upload manual de PDF.
-      if (scraped.pdfLinks?.length) {
-        const pdfResult = await saveKnowledgePdfLinks(scraped.pdfLinks);
+      // Editais, formulários, portarias etc linkados na página (PDF ou
+      // .docx) — baixa e indexa cada um como documento próprio, igual o
+      // upload manual de arquivo.
+      if (scraped.documentLinks?.length) {
+        const pdfResult = await saveKnowledgeDocumentLinks(scraped.documentLinks);
         pdfsProcessed += pdfResult.ok;
         pdfsSkipped.push(...pdfResult.failed);
       }
     }
 
-    const pdfMsg = pdfsProcessed ? ` ${pdfsProcessed} PDF(s) linkado(s) também indexado(s).` : "";
+    const pdfMsg = pdfsProcessed
+      ? ` ${pdfsProcessed} documento(s) linkado(s) também indexado(s).`
+      : "";
 
     return NextResponse.json({
       success: true,

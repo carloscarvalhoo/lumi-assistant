@@ -75,15 +75,19 @@ export async function scrapePage(url, conditional = {}) {
     const $ = cheerio.load(html);
     const title = $("title").first().text().trim() || "Página Web";
 
-    // Links pra PDF (editais, formulários, portarias...) — coletados ANTES de
-    // remover nav/menu/sidebar, porque é comum esse tipo de documento estar
-    // linkado justamente num menu lateral, não no corpo do texto.
-    const pdfLinks = new Set();
-    $('a[href$=".pdf"], a[href*=".pdf?"], a[href*=".pdf#"]').each((_, el) => {
+    // Links pra documento (editais, formulários, portarias... em PDF ou
+    // Word) — coletados ANTES de remover nav/menu/sidebar, porque é comum
+    // esse tipo de documento estar linkado justamente num menu lateral, não
+    // no corpo do texto.
+    const documentLinks = new Set();
+    $(
+      'a[href$=".pdf"], a[href*=".pdf?"], a[href*=".pdf#"], ' +
+        'a[href$=".docx"], a[href*=".docx?"], a[href*=".docx#"]',
+    ).each((_, el) => {
       const href = $(el).attr("href");
       if (!href) return;
       try {
-        pdfLinks.add(new URL(href, url).href);
+        documentLinks.add(new URL(href, url).href);
       } catch {
         // Ignora link inválido
       }
@@ -109,7 +113,7 @@ export async function scrapePage(url, conditional = {}) {
       text,
       etag: response.headers.get("etag"),
       lastModified: response.headers.get("last-modified"),
-      pdfLinks: [...pdfLinks],
+      documentLinks: [...documentLinks],
     };
   } catch (error) {
     const reason =
