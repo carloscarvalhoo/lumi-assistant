@@ -9,6 +9,7 @@ import {
   searchKnowledgeChunks,
 } from "@/server/knowledge/searchKnowledge";
 import { sendChatWithFallback, streamChatWithFallback } from "@/server/ai/fallback";
+import { shouldSearchKnowledge } from "@/server/ai/intentGate";
 import { getSystemPrompt } from "@/server/ai/prompts";
 import { normalizeBufferHistory, updateMemoryIfNeeded } from "@/server/ai/memory";
 import { getSettings } from "@/server/settings/getSettings";
@@ -56,10 +57,15 @@ const LOW_CONFIDENCE_CAVEAT =
  * Busca + settings + frescor das fontes + system prompt, tudo junto.
  */
 async function prepareContext(currentMessageText, longMemory, settingsPromise) {
-  const [settings, knowledgeChunks] = await Promise.all([
+  const [settings, needsSearch] = await Promise.all([
     settingsPromise,
-    searchKnowledgeChunks(currentMessageText),
+    shouldSearchKnowledge(currentMessageText),
   ]);
+
+  // Saudação, apresentação pessoal, comentário solto etc: não vale gastar
+  // embedding numa busca que não tem nada a ver. O prompt já sabe como
+  // conversar normalmente sem contexto da base nesses casos.
+  const knowledgeChunks = needsSearch ? await searchKnowledgeChunks(currentMessageText) : [];
 
   const sourcesInfo = await getSourcesWithFreshness(knowledgeChunks);
 

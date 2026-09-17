@@ -10,7 +10,7 @@
  * @module server/ai/embeddings
  */
 
-import { withRetry, withTimeout } from "@/server/ai/retry";
+import { withRetry } from "@/server/ai/retry";
 import { classifyProviderError, RETRYABLE_SAME_MODEL } from "@/server/ai/errors";
 import { logger } from "@/server/utils/logger";
 
@@ -106,15 +106,31 @@ function buildRequest(text, { taskType, title }) {
 function postJsonWithKey(url, body, key) {
   return withRetry(
     async () => {
-      const response = await withTimeout(
-        fetch(url, {
+      // Timeout via Promise.race (sem abortar o fetch de verdade) deixava a
+      // conexão original pendurada em segundo plano — em lotes grandes com
+      // retry, isso esgotava o pool de conexões e travava tudo sem erro
+      // nenhum pra logar. AbortController cancela a conexão de fato.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), EMBED_TIMEOUT_MS);
+
+      let response;
+      try {
+        response = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": key },
           body: JSON.stringify(body),
-        }),
-        EMBED_TIMEOUT_MS,
-        "embeddings",
-      );
+          signal: controller.signal,
+        });
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          const timeoutError = new Error(`Timeout de ${EMBED_TIMEOUT_MS}ms em embeddings.`);
+          timeoutError.name = "AbortError";
+          throw timeoutError;
+        }
+        throw error;
+      } finally {
+        clearTimeout(timer);
+      }
 
       const data = await response.json().catch(() => ({}));
 
