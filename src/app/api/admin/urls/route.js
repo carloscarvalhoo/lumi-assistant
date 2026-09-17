@@ -26,6 +26,9 @@ export async function POST(request) {
     let pdfsProcessed = 0;
     const skipped = [];
     const pdfsSkipped = [];
+    // O mesmo documento (PPP, mapa do site etc) costuma estar linkado em
+    // várias páginas selecionadas — processa cada URL só uma vez na rodada.
+    const documentResultCache = new Map();
 
     for (const url of urlsSelecionadas) {
       logger.debug(`🤖 Processando: ${url}`);
@@ -43,7 +46,9 @@ export async function POST(request) {
       // .docx) — baixa e indexa cada um como documento próprio, igual o
       // upload manual de arquivo.
       if (scraped.documentLinks?.length) {
-        const pdfResult = await saveKnowledgeDocumentLinks(scraped.documentLinks);
+        const pdfResult = await saveKnowledgeDocumentLinks(scraped.documentLinks, {
+          resultCache: documentResultCache,
+        });
         pdfsProcessed += pdfResult.ok;
         pdfsSkipped.push(...pdfResult.failed);
       }

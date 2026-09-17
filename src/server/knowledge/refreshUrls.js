@@ -69,6 +69,10 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
     sitemaps.set(origin, await loadSitemapLastmod(origin));
   }
 
+  // O mesmo documento (PPP, mapa do site etc) costuma estar linkado em
+  // várias páginas — processa cada URL só uma vez em toda a rodada.
+  const documentResultCache = new Map();
+
   for (let i = 0; i < urlDocs.length; i++) {
     const doc = urlDocs[i];
     const data = doc.data();
@@ -138,7 +142,9 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
         // documentos linkados dela, aproveita que já baixamos o corpo agora.
         if (!docsAlreadyChecked && scraped.documentLinks?.length) {
           try {
-            await saveKnowledgeDocumentLinks(scraped.documentLinks);
+            await saveKnowledgeDocumentLinks(scraped.documentLinks, {
+              resultCache: documentResultCache,
+            });
           } catch (error) {
             logger.warn(`⚠️ Falha ao indexar documentos linkados em ${url}: ${error?.message}`);
           }
@@ -189,7 +195,9 @@ export async function refreshAllUrls({ onProgress, fileIds } = {}) {
       // impede o resto de continuar rolando.
       if (scraped.documentLinks?.length) {
         try {
-          await saveKnowledgeDocumentLinks(scraped.documentLinks);
+          await saveKnowledgeDocumentLinks(scraped.documentLinks, {
+            resultCache: documentResultCache,
+          });
         } catch (error) {
           logger.warn(`⚠️ Falha ao indexar documentos linkados em ${url}: ${error?.message}`);
         }

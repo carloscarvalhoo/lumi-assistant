@@ -21,9 +21,12 @@ import { logger } from "@/server/utils/logger";
  *  - senão: usa o texto bruto guardado (rawText).
  *
  * @param {string} fileId
+ * @param {{documentResultCache?: Map<string, {ok: boolean, reason?: string}>}} [options]
+ *   `documentResultCache` evita baixar/re-embedar de novo um documento
+ *   (PDF/docx) já processado nessa mesma rodada por outro arquivo.
  * @returns {Promise<{ fileId: string, chunksCount: number, changed: boolean }>}
  */
-export async function reprocessKnowledgeFile(fileId) {
+export async function reprocessKnowledgeFile(fileId, { documentResultCache } = {}) {
   if (!fileId) throw createHttpError("ID do documento não informado.", 400);
 
   const file = await getKnowledgeFile(fileId);
@@ -82,7 +85,7 @@ export async function reprocessKnowledgeFile(fileId) {
   // de mudança do "Verificar atualizações" pularia ela por não ter mudado.
   if (documentLinks.length) {
     try {
-      await saveKnowledgeDocumentLinks(documentLinks);
+      await saveKnowledgeDocumentLinks(documentLinks, { resultCache: documentResultCache });
     } catch (error) {
       logger.warn(`⚠️ Falha ao indexar documentos linkados em ${sourceUrl}: ${error?.message}`);
     }
@@ -107,6 +110,10 @@ export async function reprocessAllKnowledgeFiles({ onProgress, fileIds } = {}) {
     ids = docs.map((doc) => doc.id);
   }
 
+  // O mesmo documento (PPP, mapa do site etc) costuma estar linkado em
+  // vários arquivos-URL selecionados — processa cada um só uma vez.
+  const documentResultCache = new Map();
+
   const results = [];
   for (let i = 0; i < ids.length; i++) {
     // Busca um rótulo legível (URL ou nome) só pra mostrar progresso — não
@@ -120,7 +127,7 @@ export async function reprocessAllKnowledgeFiles({ onProgress, fileIds } = {}) {
     }
 
     try {
-      const result = await reprocessKnowledgeFile(ids[i]);
+      const result = await reprocessKnowledgeFile(ids[i], { documentResultCache });
       results.push({ ...result, ok: true });
     } catch (error) {
       results.push({ fileId: ids[i], ok: false, error: error?.message });

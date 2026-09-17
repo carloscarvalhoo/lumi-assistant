@@ -151,22 +151,34 @@ export async function saveKnowledgeDocumentLink(docUrl) {
  * segurança). Falhas em documentos individuais não derrubam o processamento
  * da página em si — cada um é tentado de forma independente.
  *
+ * O mesmo documento costuma estar linkado em várias páginas (ex.: o PPP do
+ * campus no rodapé de quase toda página). Sem `resultCache`, cada ocorrência
+ * baixaria e re-embedaria o mesmo conteúdo de novo — puro desperdício de
+ * tempo e cota. Passe um Map compartilhado entre as páginas de uma mesma
+ * execução (mapear/verificar/reindexar) pra processar cada URL só uma vez
+ * por rodada e reaproveitar o resultado (sucesso OU falha) nas repetições.
+ *
  * @param {string[]} documentLinks
+ * @param {{resultCache?: Map<string, {ok: boolean, reason?: string}>}} [options]
  * @returns {Promise<{ok: number, failed: {url: string, reason: string}[]}>}
  */
-export async function saveKnowledgeDocumentLinks(documentLinks) {
+export async function saveKnowledgeDocumentLinks(documentLinks, { resultCache } = {}) {
   const links = (documentLinks || []).slice(0, MAX_DOCUMENT_LINKS_PER_PAGE);
   const failed = [];
   let ok = 0;
 
   for (const docUrl of links) {
-    try {
-      const result = await saveKnowledgeDocumentLink(docUrl);
-      if (result.ok) ok += 1;
-      else failed.push({ url: docUrl, reason: result.reason });
-    } catch (error) {
-      failed.push({ url: docUrl, reason: error?.message || "erro desconhecido" });
-    }
+    const cached = resultCache?.get(docUrl);
+    const result =
+      cached ||
+      (await saveKnowledgeDocumentLink(docUrl).catch((error) => ({
+        ok: false,
+        reason: error?.message || "erro desconhecido",
+      })));
+    resultCache?.set(docUrl, result);
+
+    if (result.ok) ok += 1;
+    else failed.push({ url: docUrl, reason: result.reason });
   }
 
   return { ok, failed };
