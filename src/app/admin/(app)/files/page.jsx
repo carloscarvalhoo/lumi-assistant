@@ -20,6 +20,7 @@ export default function AdminFilesPage() {
     reindexing,
     reindexingLabel,
     bulkProgress,
+    urlProgress,
     progress,
     error,
     successMessage,
@@ -103,7 +104,17 @@ export default function AdminFilesPage() {
 
   return (
     <div className="space-y-10">
-      <EmbeddingLoader active={uploading} count={uploadingCount} type={uploadingType} />
+      <EmbeddingLoader
+        active={uploading && uploadingType === "file"}
+        count={uploadingCount}
+        type={uploadingType}
+      />
+      <LoadingOverlay
+        active={uploading && uploadingType === "url"}
+        title={urlProgress ? `Indexando ${urlProgress.total} página(s)` : "Indexando páginas…"}
+        subtitle="Isso pode levar alguns minutos. Não feche esta janela."
+        progress={urlProgress}
+      />
       <LoadingOverlay
         active={reindexing}
         title={reindexingLabel || "Processando…"}

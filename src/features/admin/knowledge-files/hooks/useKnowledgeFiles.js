@@ -25,6 +25,7 @@ export function useKnowledgeFiles() {
   const [reindexingLabel, setReindexingLabel] = useState("");
   const [progress, setProgress] = useState(0);
   const [bulkProgress, setBulkProgress] = useState(null);
+  const [urlProgress, setUrlProgress] = useState(null);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [refreshResult, setRefreshResult] = useState(null);
@@ -64,11 +65,12 @@ export function useKnowledgeFiles() {
 
   async function uploadUrl(urls) {
     setUploading(true);
+    setUrlProgress({ done: 0, total: urls.length, label: "" });
     setError("");
     setSuccessMessage("");
     try {
-      await indexKnowledgeUrl(urls);
-      setSuccessMessage(`${urls.length} página(s) indexada(s).`);
+      const result = await indexKnowledgeUrl(urls, setUrlProgress);
+      setSuccessMessage(result?.message || `${urls.length} página(s) indexada(s).`);
       await loadFiles();
       return true;
     } catch (err) {
@@ -76,6 +78,7 @@ export function useKnowledgeFiles() {
       return false;
     } finally {
       setUploading(false);
+      setUrlProgress(null);
     }
   }
 
@@ -271,6 +274,7 @@ export function useKnowledgeFiles() {
     reindexing,
     reindexingLabel,
     bulkProgress,
+    urlProgress,
     progress,
     error,
     successMessage,

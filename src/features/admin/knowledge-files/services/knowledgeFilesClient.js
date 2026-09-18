@@ -208,19 +208,17 @@ export async function logoutAdmin() {
    NOVA FUNÇÃO: INDEXAR URL / LINKS
    ========================================================================== */
 // Dentro do seu arquivo de serviços (knowledgeFilesClient.js)
-export async function indexKnowledgeUrl(urlsSelecionadas) {
+export async function indexKnowledgeUrl(urlsSelecionadas, onProgress) {
   const response = await fetch("/api/admin/urls", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    // O backend agora espera a chave 'urlsSelecionadas'
     body: JSON.stringify({ urlsSelecionadas }),
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || "Erro ao processar URLs");
+  if (!response.ok && response.headers.get("content-type")?.includes("application/json")) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.error || "Erro ao processar URLs.");
   }
 
-  return data;
+  return readProgressStream(response, onProgress);
 }
