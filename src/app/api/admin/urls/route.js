@@ -8,6 +8,11 @@ import { logger } from "@/server/utils/logger";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// A maior parte do tempo de cada página é espera de rede (baixar a página,
+// esperar o Gemini responder o embedding), não CPU — processar várias em
+// paralelo encurta bastante o tempo total sem multiplicar as requisições.
+const CONCURRENCY = Number(process.env.INDEX_URLS_CONCURRENCY) || 5;
+
 export async function POST(request) {
   const authError = await checkAdminAccess();
   if (authError) return authError;
@@ -30,18 +35,17 @@ export async function POST(request) {
     // várias páginas selecionadas — processa cada URL só uma vez na rodada.
     const documentResultCache = new Map();
 
-    for (const url of urlsSelecionadas) {
+    async function processarUrl(url) {
       logger.debug(`🤖 Processando: ${url}`);
       const scraped = await scrapePage(url);
-
       if (!scraped.ok) {
-        skipped.push({ url, reason: scraped.reason });
-        continue;
+        return { ok: false, url, reason: scraped.reason };
       }
 
       await saveKnowledgeUrl(scraped.title, url, scraped.text);
-      processed += 1;
 
+      let pdfsOk = 0;
+      const pdfsFailed = [];
       // Editais, formulários, portarias etc linkados na página (PDF ou
       // .docx) — baixa e indexa cada um como documento próprio, igual o
       // upload manual de arquivo.
@@ -49,8 +53,32 @@ export async function POST(request) {
         const pdfResult = await saveKnowledgeDocumentLinks(scraped.documentLinks, {
           resultCache: documentResultCache,
         });
-        pdfsProcessed += pdfResult.ok;
-        pdfsSkipped.push(...pdfResult.failed);
+        pdfsOk = pdfResult.ok;
+        pdfsFailed.push(...pdfResult.failed);
+      }
+      return { ok: true, url, pdfsOk, pdfsFailed };
+    }
+
+    for (let i = 0; i < urlsSelecionadas.length; i += CONCURRENCY) {
+      const lote = urlsSelecionadas.slice(i, i + CONCURRENCY);
+      const resultados = await Promise.all(
+        lote.map((url) =>
+          processarUrl(url).catch((error) => ({
+            ok: false,
+            url,
+            reason: error?.message || "erro desconhecido",
+          })),
+        ),
+      );
+
+      for (const resultado of resultados) {
+        if (!resultado.ok) {
+          skipped.push({ url: resultado.url, reason: resultado.reason });
+          continue;
+        }
+        processed += 1;
+        pdfsProcessed += resultado.pdfsOk;
+        pdfsSkipped.push(...resultado.pdfsFailed);
       }
     }
 
