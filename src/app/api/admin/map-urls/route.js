@@ -80,12 +80,24 @@ export async function POST(request) {
     function ehMesmoDominioEValido(urlAbsoluta) {
       const mesmoDominio = urlAbsoluta.origin === urlOriginal.origin;
       const ehArquivo = /\.(pdf|jpg|jpeg|png|zip|gif|doc|docx)$/i.test(urlAbsoluta.pathname);
-      if (!mesmoDominio || ehArquivo) return false;
+      // Paginação de listagem (blog, categoria etc.) não é conteúdo em si, só
+      // um índice pras páginas 2, 3... 101 de novidades — os posts de verdade
+      // já são descobertos direto (link próprio ou sitemap), então essas
+      // páginas de índice só duplicam trabalho sem agregar conteúdo.
+      const ehPaginacao = /\/page\/\d+\/?$/i.test(urlAbsoluta.pathname);
+      if (!mesmoDominio || ehArquivo || ehPaginacao) return false;
       if (basePath === "/") return true;
       const path = urlAbsoluta.pathname.endsWith("/")
         ? urlAbsoluta.pathname
         : `${urlAbsoluta.pathname}/`;
       return path.startsWith(basePath);
+    }
+
+    // Normaliza pra evitar duplicata: "/pagina#topo" e "/pagina" são a MESMA
+    // URL pro nosso propósito (a âncora só rola a tela, não muda conteúdo).
+    function normalizarUrl(urlAbsoluta) {
+      urlAbsoluta.hash = "";
+      return urlAbsoluta.href.replace(/\/$/, "");
     }
 
     // Coleta os links válidos do HTML da página em si (funciona bem em sites
@@ -96,8 +108,7 @@ export async function POST(request) {
         try {
           const urlAbsoluta = new URL(href, urlOriginal.origin);
           if (ehMesmoDominioEValido(urlAbsoluta)) {
-            // Remove a barra final para evitar duplicatas (ex: site.com/ e site.com)
-            urlsEncontradas.add(urlAbsoluta.href.replace(/\/$/, ""));
+            urlsEncontradas.add(normalizarUrl(urlAbsoluta));
           }
         } catch {
           // Ignora links inválidos
@@ -114,7 +125,7 @@ export async function POST(request) {
         try {
           const urlAbsoluta = new URL(loc);
           if (ehMesmoDominioEValido(urlAbsoluta)) {
-            urlsEncontradas.add(urlAbsoluta.href.replace(/\/$/, ""));
+            urlsEncontradas.add(normalizarUrl(urlAbsoluta));
           }
         } catch {
           // Ignora entradas de sitemap com URL inválida
@@ -142,7 +153,7 @@ export async function POST(request) {
           try {
             const urlAbsoluta = new URL(href, pageUrl);
             if (ehMesmoDominioEValido(urlAbsoluta)) {
-              encontrados.push(urlAbsoluta.href.replace(/\/$/, ""));
+              encontrados.push(normalizarUrl(urlAbsoluta));
             }
           } catch {
             // Ignora link inválido
