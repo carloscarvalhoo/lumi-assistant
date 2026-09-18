@@ -14,6 +14,15 @@ export const maxDuration = 60;
 // painel (a lista de checkboxes ficaria inviável de navegar).
 const MAX_URLS = 500;
 
+// Alguns sites (o IFPR, por exemplo) têm sitemap.xml que NÃO cobre certas
+// seções (subsites de campus). Nesses casos, uma página "hub" descoberta no
+// menu (ex: /sepae/) pode ter links pros programas específicos dela que só
+// existem no HTML da própria página hub, não na página raiz nem no sitemap.
+// Por isso entra em cada página recém-descoberta e coleta os links dela
+// também (mais um nível), até este teto de segurança.
+const MAX_CRAWL_PAGES = Number(process.env.MAP_MAX_CRAWL_PAGES) || 80;
+const CRAWL_CONCURRENCY = 8;
+
 export async function POST(request) {
   const authError = await checkAdminAccess();
   if (authError) return authError;
@@ -114,6 +123,51 @@ export async function POST(request) {
     } catch (error) {
       logger.warn(`⚠️ Falha ao ler sitemap de ${urlOriginal.origin}: ${error?.message}`);
       // Sem sitemap, segue só com o que achou no HTML da própria página.
+    }
+
+    async function coletarLinksDe(pageUrl) {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), Number(process.env.SCRAPE_TIMEOUT_MS) || 15000);
+      try {
+        const res = await fetch(pageUrl, {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+          signal: ctl.signal,
+        });
+        if (!res.ok) return [];
+        const $$ = cheerio.load(await res.text());
+        const encontrados = [];
+        $$("a[href]").each((_, el) => {
+          const href = $$(el).attr("href");
+          if (!href) return;
+          try {
+            const urlAbsoluta = new URL(href, pageUrl);
+            if (ehMesmoDominioEValido(urlAbsoluta)) {
+              encontrados.push(urlAbsoluta.href.replace(/\/$/, ""));
+            }
+          } catch {
+            // Ignora link inválido
+          }
+        });
+        return encontrados;
+      } catch {
+        return [];
+      } finally {
+        clearTimeout(t);
+      }
+    }
+
+    // Entra em cada página nova (até o teto), em lotes, pra achar links de
+    // segundo nível que nem a página raiz nem o sitemap expuseram.
+    const paginasParaVisitar = Array.from(urlsEncontradas)
+      .filter((u) => u !== urlOriginal.href)
+      .slice(0, MAX_CRAWL_PAGES);
+
+    for (let i = 0; i < paginasParaVisitar.length; i += CRAWL_CONCURRENCY) {
+      const lote = paginasParaVisitar.slice(i, i + CRAWL_CONCURRENCY);
+      const resultados = await Promise.all(lote.map(coletarLinksDe));
+      for (const links of resultados) {
+        for (const link of links) urlsEncontradas.add(link);
+      }
     }
 
     const urls = Array.from(urlsEncontradas).slice(0, MAX_URLS);
