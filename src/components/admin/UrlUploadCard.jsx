@@ -19,6 +19,75 @@ function hostnameOf(url) {
   }
 }
 
+// Deixa "nossos-cursos" -> "Nossos cursos" pra usar como título do grupo.
+function tituloDoSlug(slug) {
+  const texto = slug.replace(/-/g, " ").trim();
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+// Agrupa a lista plana de URLs mapeadas pelo primeiro segmento de caminho
+// depois da URL base (ex.: mapeando /ivaipora/, ".../sepae/bolsistas" e
+// ".../sepae/pace..." caem no mesmo grupo "Sepae"). Com centenas de URLs,
+// uma lista só vira impossível de revisar — agrupado fica muito mais fácil
+// de selecionar por seção.
+function agruparUrls(urls, baseUrl) {
+  let basePath = "";
+  try {
+    basePath = new URL(baseUrl).pathname.replace(/\/$/, "");
+  } catch {
+    basePath = "";
+  }
+
+  const raiz = [];
+  const gruposPorChave = new Map();
+
+  for (const link of urls) {
+    let relativo = "";
+    try {
+      const u = new URL(link);
+      relativo = u.pathname.startsWith(basePath) ? u.pathname.slice(basePath.length) : u.pathname;
+      relativo = relativo.replace(/^\//, "");
+      if (!relativo && u.search) relativo = u.search.replace(/^\?/, "");
+    } catch {
+      relativo = link;
+    }
+
+    const primeiroSegmento = relativo.split("/")[0];
+    if (!primeiroSegmento) {
+      raiz.push(link);
+      continue;
+    }
+
+    const chave = decodeURIComponent(primeiroSegmento);
+    if (!gruposPorChave.has(chave)) gruposPorChave.set(chave, []);
+    gruposPorChave.get(chave).push(link);
+  }
+
+  const grupos = Array.from(gruposPorChave.entries())
+    .map(([chave, links]) => ({ chave, titulo: tituloDoSlug(chave), links }))
+    .sort((a, b) => b.links.length - a.links.length);
+
+  return { raiz, grupos };
+}
+
+function UrlCheckbox({ link, selected, onToggle }) {
+  return (
+    <label
+      className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 transition-colors ${
+        selected ? "bg-white/8 text-zinc-100" : "text-zinc-400 hover:bg-white/5"
+      }`}
+    >
+      <input type="checkbox" checked={selected} onChange={onToggle} className="hidden" />
+      {selected ? (
+        <CheckBoxIcon fontSize="small" className="shrink-0 text-zinc-300" />
+      ) : (
+        <CheckBoxOutlineBlankIcon fontSize="small" className="shrink-0 text-zinc-600" />
+      )}
+      <span className="truncate text-sm">{link}</span>
+    </label>
+  );
+}
+
 export default function UrlUploadCard({
   uploading,
   error,
@@ -92,6 +161,15 @@ export default function UrlUploadCard({
     setUrlsSelecionadas(urlsSelecionadas.length === urlsMapeadas.length ? [] : [...urlsMapeadas]);
   }
 
+  function toggleGrupo(linksDoGrupo) {
+    const todasSelecionadas = linksDoGrupo.every((l) => urlsSelecionadas.includes(l));
+    setUrlsSelecionadas((prev) =>
+      todasSelecionadas
+        ? prev.filter((l) => !linksDoGrupo.includes(l))
+        : [...new Set([...prev, ...linksDoGrupo])],
+    );
+  }
+
   async function handleIndexar() {
     if (urlsSelecionadas.length === 0) return;
     const ok = await onUploadUrl(urlsSelecionadas);
@@ -103,6 +181,8 @@ export default function UrlUploadCard({
       setMapMessage("");
     }
   }
+
+  const { raiz, grupos } = agruparUrls(urlsMapeadas, url);
 
   return (
     <section className="mb-8 rounded-[28px] border border-white/10 bg-[var(--surface-elevated)]/90 p-6 shadow-2xl shadow-black/30">
@@ -177,29 +257,62 @@ export default function UrlUploadCard({
             </button>
           </div>
 
-          <div className="max-h-64 space-y-1 overflow-y-auto glass-subtle rounded-2xl p-2">
-            {urlsMapeadas.map((link) => {
-              const selected = urlsSelecionadas.includes(link);
+          <div className="max-h-96 space-y-2 overflow-y-auto glass-subtle rounded-2xl p-2">
+            {raiz.map((link) => (
+              <UrlCheckbox
+                key={link}
+                link={link}
+                selected={urlsSelecionadas.includes(link)}
+                onToggle={() => toggleUrl(link)}
+              />
+            ))}
+
+            {grupos.map(({ chave, titulo, links }) => {
+              const selecionadasNoGrupo = links.filter((l) => urlsSelecionadas.includes(l)).length;
+              const todasSelecionadas = selecionadasNoGrupo === links.length;
               return (
-                <label
-                  key={link}
-                  className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 transition-colors ${
-                    selected ? "bg-white/8 text-zinc-100" : "text-zinc-400 hover:bg-white/5"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    onChange={() => toggleUrl(link)}
-                    className="hidden"
-                  />
-                  {selected ? (
-                    <CheckBoxIcon fontSize="small" className="shrink-0 text-zinc-300" />
-                  ) : (
-                    <CheckBoxOutlineBlankIcon fontSize="small" className="shrink-0 text-zinc-600" />
-                  )}
-                  <span className="truncate text-sm">{link}</span>
-                </label>
+                <details key={chave} className="rounded-xl">
+                  <summary className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/5">
+                    <span
+                      role="checkbox"
+                      aria-checked={todasSelecionadas}
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        toggleGrupo(links);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleGrupo(links);
+                        }
+                      }}
+                      className="shrink-0"
+                    >
+                      {todasSelecionadas ? (
+                        <CheckBoxIcon fontSize="small" className="text-zinc-300" />
+                      ) : selecionadasNoGrupo > 0 ? (
+                        <CheckBoxIcon fontSize="small" className="text-zinc-600" />
+                      ) : (
+                        <CheckBoxOutlineBlankIcon fontSize="small" className="text-zinc-600" />
+                      )}
+                    </span>
+                    <span className="flex-1 truncate font-medium">{titulo}</span>
+                    <span className="shrink-0 text-xs text-zinc-500">
+                      {selecionadasNoGrupo}/{links.length}
+                    </span>
+                  </summary>
+                  <div className="mt-1 space-y-1 pl-6">
+                    {links.map((link) => (
+                      <UrlCheckbox
+                        key={link}
+                        link={link}
+                        selected={urlsSelecionadas.includes(link)}
+                        onToggle={() => toggleUrl(link)}
+                      />
+                    ))}
+                  </div>
+                </details>
               );
             })}
           </div>
