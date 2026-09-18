@@ -27,6 +27,9 @@ const PRESETS = {
 };
 
 const ATTEMPT_TIMEOUT_MS = Number(process.env.AI_ATTEMPT_TIMEOUT_MS) || 25000;
+// Sem isso, o provedor aplica o próprio default (às vezes baixo o bastante
+// pra cortar uma resposta longa e estruturada no meio de uma frase).
+const MAX_OUTPUT_TOKENS = Number(process.env.AI_MAX_OUTPUT_TOKENS) || 2048;
 
 /** @param {string} presetId */
 export function isConfigured(presetId) {
@@ -62,7 +65,7 @@ async function createCompletion(presetId, model, messages) {
         Authorization: `Bearer ${apiKey}`,
         ...extraHeaders,
       },
-      body: JSON.stringify({ model, messages, temperature: 0.4 }),
+      body: JSON.stringify({ model, messages, temperature: 0.4, max_tokens: MAX_OUTPUT_TOKENS }),
     },
     ATTEMPT_TIMEOUT_MS,
   );
@@ -113,7 +116,13 @@ export function createOpenAICompatibleProvider(presetId, model) {
             Authorization: `Bearer ${apiKey}`,
             ...extraHeaders,
           },
-          body: JSON.stringify({ model, messages, temperature: 0.4, stream: true }),
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.4,
+            stream: true,
+            max_tokens: MAX_OUTPUT_TOKENS,
+          }),
         },
         (evt) => evt?.choices?.[0]?.delta?.content || "",
         ATTEMPT_TIMEOUT_MS,
